@@ -1,0 +1,2514 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AC → Test Cases Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121831;
+        --panel-2: #161d3a;
+        --border: #243056;
+        --text: #e6e9f5;
+        --muted: #9aa3c0;
+        --accent: #7c5cff;
+        --accent-2: #22d3ee;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+          radial-gradient(900px 500px at 110% 10%, rgba(34, 211, 238, 0.12), transparent 60%),
+          var(--bg);
+        color: var(--text);
+        font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        min-height: 100vh;
+      }
+      .app { max-width: 1400px; margin: 0 auto; padding: 28px 24px 80px; }
+      header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; margin-bottom: 24px;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; }
+      .brand .logo {
+        width: 38px; height: 38px; border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        display: grid; place-items: center; font-weight: 700; color: #0b1020;
+        box-shadow: 0 6px 24px rgba(124, 92, 255, 0.35);
+      }
+      .brand h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: 0.2px; }
+      .brand p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+      .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(380px, 1fr) minmax(0, 1.6fr);
+        gap: 20px;
+      }
+      @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+      .card {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--border); border-radius: 16px; padding: 18px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+      .card h2 {
+        font-size: 14px; font-weight: 600; margin: 0 0 14px; color: var(--text);
+        display: flex; align-items: center; gap: 8px;
+      }
+      .card h2 .dot {
+        width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.18);
+      }
+      label {
+        display: block; font-size: 12px; color: var(--muted);
+        margin: 12px 0 6px; font-weight: 500;
+      }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      input[type="text"], input[type="password"], select, textarea {
+        width: 100%; background: #0d1330; border: 1px solid var(--border);
+        color: var(--text); border-radius: 10px; padding: 10px 12px;
+        font-size: 13.5px; font-family: inherit; outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
+      textarea#ac { min-height: 160px; }
+      input:focus, select:focus, textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+      }
+      .hint { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+      .hint a { color: var(--accent-2); text-decoration: none; }
+      .hint a:hover { text-decoration: underline; }
+      button {
+        cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13.5px;
+        border-radius: 10px; border: 1px solid var(--border);
+        padding: 10px 14px; background: #0d1330; color: var(--text);
+        transition: transform 0.05s, background 0.15s, border-color 0.15s, opacity 0.15s;
+      }
+      button:hover { background: #131a3d; }
+      button:active { transform: translateY(1px); }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      button.primary {
+        background: linear-gradient(135deg, var(--accent), #5b3df0);
+        border-color: transparent; color: white;
+        box-shadow: 0 8px 24px rgba(124, 92, 255, 0.35);
+      }
+      button.primary:hover { filter: brightness(1.05); }
+      button.ghost { background: transparent; }
+      .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+      .status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
+      .status.error { color: var(--danger); }
+      .status.success { color: var(--success); }
+      .result-toolbar {
+        display: flex; gap: 8px; margin-bottom: 12px;
+        flex-wrap: wrap; align-items: center; justify-content: space-between;
+      }
+      .tabs { display: flex; gap: 4px; }
+      .tab {
+        padding: 6px 12px; font-size: 12.5px; border-radius: 8px;
+        border: 1px solid var(--border); background: transparent; color: var(--muted);
+      }
+      .tab.active { color: var(--text); background: #0d1330; border-color: var(--accent); }
+      /* ----- Toolbar icon buttons + Download dropdown ----- */
+      .icon-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        gap: 4px; padding: 5px 9px; min-width: 32px; height: 30px;
+        background: transparent; color: var(--muted);
+        border: 1px solid var(--border); border-radius: 8px;
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+      }
+      .icon-btn svg { display: block; }
+      .icon-btn .chevron { opacity: 0.6; margin-left: 1px; }
+      .icon-btn:not(:disabled):hover {
+        color: var(--text); border-color: var(--accent);
+        background: rgba(124, 92, 255, 0.08);
+      }
+      .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+      .icon-btn.active {
+        color: var(--text); background: rgba(124, 92, 255, 0.18);
+        border-color: var(--accent);
+      }
+
+      .icon-btn.primary {
+        color: white; background: var(--accent); border-color: var(--accent);
+      }
+      .icon-btn.primary:not(:disabled):hover {
+        color: white; background: #6b4eef; border-color: #6b4eef;
+      }
+      .icon-btn.danger-hover:not(:disabled):hover {
+        color: var(--danger); border-color: var(--danger);
+        background: rgba(239, 68, 68, 0.08);
+      }
+
+      .download-menu { position: relative; display: inline-block; }
+      .download-dropdown {
+        position: absolute; right: 0; top: calc(100% + 4px);
+        background: #11183a; border: 1px solid var(--border);
+        border-radius: 8px; padding: 4px; min-width: 156px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        display: none; z-index: 50;
+      }
+      .download-menu[data-open="true"] .download-dropdown { display: block; }
+      .dd-item {
+        display: flex; align-items: baseline; justify-content: space-between;
+        gap: 8px; width: 100%; padding: 7px 10px;
+        background: transparent; color: var(--text);
+        border: 0; border-radius: 6px;
+        font-size: 12.5px; cursor: pointer; text-align: left;
+      }
+      .dd-item:not(:disabled):hover { background: rgba(124, 92, 255, 0.16); }
+      .dd-item:disabled { opacity: 0.4; cursor: not-allowed; color: var(--muted); }
+      .dd-item .dd-ext {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 10.5px; color: var(--muted);
+      }
+      .dd-item:not(:disabled):hover .dd-ext { color: var(--text); }
+      .result-pane {
+        background: #0a0f26; border: 1px solid var(--border);
+        border-radius: 12px; padding: 14px;
+        /* Scroll behaviour lives on .tc-scroll (below) so the sticky <th>
+           inside the table has ZERO padding above it — otherwise the .result-
+           pane padding creates a transparent strip the sticky header can't
+           reach, and tbody rows visibly bleed under it during scroll. */
+      }
+      .tc-scroll {
+        /* Pull to the edges of the .result-pane content box (negate its 14px
+           padding) so the table fills edge-to-edge and the sticky header
+           sticks flush to the top of the scrolling viewport. */
+        margin: -14px;
+        max-height: 85vh;
+        overflow: auto;
+        border-radius: 12px;
+        /* Establish a positioning + paint context so position:sticky inside
+           is rock-solid (Safari has historical bugs without this). */
+        contain: layout paint style;
+      }
+      .stop-btn {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.55);
+        color: #fecaca;
+      }
+      .stop-btn:not(:disabled):hover {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.85);
+        color: #fff;
+      }
+      .auth-modal-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(2, 6, 23, 0.92);
+        backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9999;
+      }
+      .auth-modal-backdrop[hidden] { display: none; }
+      .auth-modal {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--border); border-radius: 16px;
+        max-width: 380px; width: calc(100% - 40px);
+        padding: 24px 22px 20px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+      }
+      .auth-modal h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
+      .auth-modal .sub { color: var(--muted); font-size: 12px; margin: 0 0 16px; }
+      .auth-modal label { display: block; font-size: 11.5px; color: var(--muted); margin: 10px 0 4px; font-weight: 500; }
+      .auth-modal input[type="text"], .auth-modal input[type="password"] {
+        width: 100%; background: #0d1330; border: 1px solid var(--border);
+        color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 13px;
+      }
+      .auth-modal input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+      .auth-modal .auth-actions { margin-top: 16px; display: flex; gap: 8px; }
+      .auth-modal .auth-actions button { flex: 1; }
+      .auth-modal .auth-error { color: #fca5a5; font-size: 12px; margin-top: 10px; min-height: 16px; }
+      .logout-btn {
+        background: transparent; border: 1px solid var(--border); color: var(--muted);
+        border-radius: 8px; padding: 4px 10px; font-size: 11.5px; cursor: pointer;
+      }
+      .logout-btn:hover { color: var(--text); border-color: var(--accent); }
+      .empty {
+        display: grid; place-items: center; min-height: 320px;
+        color: var(--muted); text-align: center; font-size: 13.5px;
+      }
+      /* ----- Reference Screenshots upload ----- */
+      .screenshot-drop {
+        border: 1.5px dashed var(--border); border-radius: 8px;
+        padding: 14px 12px; text-align: center; color: var(--muted); cursor: pointer;
+        transition: border-color 0.15s, background 0.15s, color 0.15s;
+        margin-top: 4px;
+      }
+      .screenshot-drop p { margin: 0 0 2px 0; font-size: 12.5px; }
+      .screenshot-drop p.tiny { font-size: 10.5px; opacity: 0.75; }
+      .screenshot-drop:hover { border-color: var(--accent); color: var(--text); }
+      .screenshot-drop.drag-active {
+        border-color: var(--accent); background: rgba(124, 92, 255, 0.08); color: var(--text);
+      }
+      .screenshot-drop.disabled { opacity: 0.55; cursor: not-allowed; }
+      .screenshot-previews {
+        display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+      }
+      .screenshot-preview {
+        position: relative; width: 96px; height: 96px;
+        border-radius: 6px; overflow: hidden;
+        border: 1px solid var(--border); background: #0b1024;
+      }
+      .screenshot-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .screenshot-preview .shot-del {
+        position: absolute; top: 3px; right: 3px;
+        background: rgba(15, 23, 42, 0.9); color: white;
+        border: 1px solid var(--border); border-radius: 4px;
+        width: 22px; height: 22px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 13px; line-height: 1; padding: 0;
+      }
+      .screenshot-preview .shot-del:hover { background: var(--danger); border-color: var(--danger); }
+      .screenshot-preview .shot-meta {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: linear-gradient(to top, rgba(15, 23, 42, 0.92), transparent);
+        padding: 3px 5px; font-size: 9.5px; color: white;
+        text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+      }
+      .screenshot-warn {
+        margin-top: 6px; padding: 6px 10px;
+        background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b;
+        border-radius: 4px; color: #f59e0b; font-size: 11.5px; line-height: 1.45;
+      }
+      .screenshot-warn strong { color: #fbbf24; }
+      /* ----- Save-success toast (flashes briefly after a successful Save) ----- */
+      .save-toast {
+        position: fixed; bottom: 24px; right: 24px;
+        display: flex; gap: 10px; align-items: center;
+        padding: 11px 16px;
+        background: #11183a; color: var(--text);
+        border: 1px solid #10b981; border-radius: 10px;
+        box-shadow: 0 10px 28px rgba(16, 185, 129, 0.32);
+        font-size: 13px; font-weight: 500; line-height: 1.2;
+        opacity: 0; transform: translateY(10px) scale(0.96);
+        transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+        pointer-events: none; z-index: 1000;
+      }
+      .save-toast.show {
+        opacity: 1; transform: translateY(0) scale(1);
+      }
+      .save-toast .check-circle {
+        flex-shrink: 0; display: block;
+      }
+      .empty .big { font-size: 38px; margin-bottom: 8px; opacity: 0.4; }
+      table.tc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+      table.tc-table th, table.tc-table td {
+        text-align: left; padding: 10px 12px;
+        border-bottom: 1px solid var(--border); vertical-align: top;
+      }
+      /* Sticky header — fully-opaque background on every layer (thead, tr, th)
+         and box-shadow as the bottom divider so it stays attached on scroll. */
+      table.tc-table thead,
+      table.tc-table thead tr { background-color: #0e1430; }
+      table.tc-table th {
+        position: sticky; top: 0;
+        background-color: #0e1430;
+        background-clip: padding-box;
+        border-bottom: none;
+        box-shadow:
+          inset 0 -1px 0 var(--border),
+          0 6px 12px -8px rgba(0, 0, 0, 0.6);
+        font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px;
+        color: var(--muted); z-index: 5;
+      }
+      table.tc-table tr:hover td { background: rgba(124, 92, 255, 0.05); }
+      /* Edit Mode */
+      .tc-table.edit-mode td[contenteditable="true"] {
+        cursor: text; outline: none;
+      }
+      .tc-table.edit-mode td[contenteditable="true"]:focus {
+        background: rgba(124, 92, 255, 0.08);
+        box-shadow: inset 0 0 0 1px var(--accent);
+      }
+      .tc-table.edit-mode th.row-actions-head,
+      .tc-table.edit-mode td.row-actions {
+        width: 36px; padding: 6px 4px; text-align: center;
+      }
+      .tc-table .row-del,
+      .tc-table .step-del {
+        background: transparent; border: 1px solid var(--border); color: var(--muted);
+        border-radius: 6px; padding: 1px 6px; font-size: 13px; line-height: 1.4;
+        cursor: pointer; transition: color 0.15s, border-color 0.15s;
+      }
+      .tc-table .row-del:hover,
+      .tc-table .step-del:hover {
+        color: var(--danger); border-color: var(--danger);
+      }
+      .tc-table .step-item {
+        display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;
+      }
+      .tc-table .step-item .step-text {
+        flex: 1; outline: none; padding: 2px 4px; border-radius: 4px;
+      }
+      .tc-table.edit-mode .step-item .step-text[contenteditable="true"] {
+        background: rgba(124, 92, 255, 0.04);
+      }
+      .tc-table.edit-mode .step-item .step-text[contenteditable="true"]:focus {
+        background: rgba(124, 92, 255, 0.12);
+        box-shadow: inset 0 0 0 1px var(--accent);
+      }
+      .tc-table .step-item .step-num {
+        font-family: "JetBrains Mono", monospace; color: var(--muted);
+        font-size: 11.5px; padding-top: 3px; min-width: 18px;
+      }
+      .tc-table .step-item .step-body {
+        flex: 1; display: flex; flex-direction: column; gap: 2px;
+      }
+      .tc-table .step-expected-row {
+        display: flex; gap: 6px; align-items: baseline; margin-top: 2px;
+      }
+      .tc-table .step-expected-label {
+        font-size: 10px; color: var(--muted); text-transform: uppercase;
+        letter-spacing: 0.5px; min-width: 56px; padding-top: 1px; font-weight: 600;
+      }
+      .tc-table .step-expected {
+        flex: 1; outline: none; padding: 1px 4px; border-radius: 4px;
+        font-size: 12px; color: var(--accent-2); min-height: 14px; min-width: 40px;
+      }
+      .tc-table.edit-mode .step-expected[contenteditable="true"] {
+        background: rgba(34, 211, 238, 0.05);
+      }
+      .tc-table.edit-mode .step-expected[contenteditable="true"]:focus {
+        background: rgba(34, 211, 238, 0.12);
+        box-shadow: inset 0 0 0 1px var(--accent-2);
+      }
+      .tc-table .step-expected:empty::before {
+        content: attr(data-placeholder); color: var(--muted); opacity: 0.55;
+        font-style: italic;
+      }
+      .tc-table .step-add {
+        background: transparent; border: 1px dashed var(--border); color: var(--muted);
+        border-radius: 6px; padding: 3px 10px; font-size: 12px; cursor: pointer;
+        margin-top: 4px;
+      }
+      .tc-table .step-add:hover { color: var(--accent); border-color: var(--accent); }
+      /* Paired-Expected column (mirrors .step-item but with cyan accent). */
+      .tc-table td.expected-cell { vertical-align: top; }
+      .tc-table .expected-item {
+        display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;
+      }
+      .tc-table .expected-item .step-num {
+        font-family: "JetBrains Mono", monospace; color: var(--muted);
+        font-size: 11.5px; padding-top: 3px; min-width: 18px;
+      }
+      .tc-table .expected-item .expected-text {
+        flex: 1; outline: none; padding: 2px 4px; border-radius: 4px;
+        white-space: pre-wrap;
+      }
+      .tc-table.edit-mode .expected-item .expected-text[contenteditable="true"] {
+        background: rgba(34, 211, 238, 0.05);
+      }
+      .tc-table.edit-mode .expected-item .expected-text[contenteditable="true"]:focus {
+        background: rgba(34, 211, 238, 0.12);
+        box-shadow: inset 0 0 0 1px var(--accent-2);
+      }
+      .tc-table .expected-item .expected-text:empty::before {
+        content: attr(data-placeholder);
+        color: var(--muted); opacity: 0.55; font-style: italic;
+      }
+      #editModeBtn.active {
+        background: var(--accent); color: white; border-color: var(--accent);
+      }
+      table.tc-table.edit-mode {
+        box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgba(124, 92, 255, 0.25);
+        border-radius: 12px; overflow: hidden;
+      }
+      .tc-table.edit-mode td.row-actions { background: rgba(124, 92, 255, 0.06); }
+      table.tc-table td:first-child {
+        font-family: "JetBrains Mono", monospace; font-weight: 600;
+        color: var(--accent-2); white-space: nowrap;
+      }
+      table.tc-table td ol, table.tc-table td ul { margin: 0; padding-left: 18px; }
+      pre.raw {
+        margin: 0; font-family: "JetBrains Mono", monospace;
+        font-size: 12.5px; line-height: 1.55; white-space: pre-wrap;
+        word-wrap: break-word; color: #d4d8eb;
+      }
+      .loader {
+        display: inline-block; width: 14px; height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.25); border-top-color: white;
+        border-radius: 50%; animation: spin 0.8s linear infinite;
+        vertical-align: -2px; margin-right: 6px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 11px; color: var(--muted);
+        background: rgba(124, 92, 255, 0.08); border: 1px solid rgba(124, 92, 255, 0.25);
+        padding: 3px 8px; border-radius: 999px;
+      }
+      .gen-timer {
+        display: none; align-items: center; gap: 6px;
+        font-size: 11.5px; font-weight: 600;
+        font-family: "JetBrains Mono", monospace;
+        color: var(--muted);
+        background: rgba(124, 92, 255, 0.08);
+        border: 1px solid rgba(124, 92, 255, 0.25);
+        padding: 4px 10px; border-radius: 999px;
+        letter-spacing: 0.3px; white-space: nowrap;
+      }
+      .gen-timer.show { display: inline-flex; }
+      .gen-timer .gen-timer-dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--muted); transition: background 0.2s;
+      }
+      .gen-timer.running {
+        color: var(--accent-2);
+        background: rgba(34, 211, 238, 0.10);
+        border-color: rgba(34, 211, 238, 0.40);
+      }
+      .gen-timer.running .gen-timer-dot {
+        background: var(--accent-2);
+        animation: pulse 1s ease-in-out infinite;
+      }
+      .gen-timer.done {
+        color: var(--success);
+        background: rgba(34, 197, 94, 0.10);
+        border-color: rgba(34, 197, 94, 0.40);
+      }
+      .gen-timer.done .gen-timer-dot { background: var(--success); }
+      .gen-timer.error {
+        color: var(--danger);
+        background: rgba(239, 68, 68, 0.10);
+        border-color: rgba(239, 68, 68, 0.40);
+      }
+      .gen-timer.error .gen-timer-dot { background: var(--danger); }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.45; transform: scale(0.75); }
+      }
+      details.settings summary {
+        cursor: pointer; list-style: none; font-size: 13px; color: var(--muted);
+        padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px;
+        display: inline-flex; align-items: center; gap: 6px; background: #0d1330;
+      }
+      details.settings summary::-webkit-details-marker { display: none; }
+      details.settings[open] summary { border-color: var(--accent); }
+      .settings-body {
+        margin-top: 12px; padding: 14px; border: 1px dashed var(--border);
+        border-radius: 12px; background: rgba(255, 255, 255, 0.015);
+      }
+      .toggle-pw { position: relative; }
+      .toggle-pw button {
+        position: absolute; right: 6px; top: 50%;
+        transform: translateY(-50%); padding: 4px 8px; font-size: 11px;
+      }
+      .footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: 12px; }
+      #customModelWrap { display: none; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <div class="logo">QA</div>
+          <div>
+            <h1>AC2TC → Test Cases Generator</h1>
+          </div>
+        </div>
+        <div class="header-actions">
+          <span class="badge" id="modelBadge">claude-opus-4-7</span>
+          <button id="logoutBtn" class="logout-btn" title="Sign out and return to the login screen" style="display:none">↪ Sign out</button>
+          <details class="settings" id="settingsDetails">
+            <summary>⚙️ Settings</summary>
+          </details>
+        </div>
+      </header>
+
+      <div id="settingsBody" class="settings-body" style="display: none">
+        <div class="row">
+          <div>
+            <label for="provider">Provider</label>
+            <select id="provider"></select>
+
+            <label for="apiKey" style="margin-top: 12px">
+              <span id="apiKeyLabel">Anthropic API Key</span>
+            </label>
+            <div class="toggle-pw">
+              <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+              <button type="button" id="togglePw" class="ghost">Show</button>
+            </div>
+            <div class="hint" id="apiKeyHint">
+              Get a key at
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"
+                >console.anthropic.com</a>. Stored only in your browser's localStorage.
+            </div>
+          </div>
+          <div>
+            <label for="model">Model</label>
+            <select id="model"></select>
+            <div id="customModelWrap">
+              <label for="customModel" style="margin-top: 8px">Custom model ID</label>
+              <input id="customModel" type="text" placeholder="e.g. claude-opus-4-7" />
+            </div>
+
+            <label for="temperature" style="margin-top: 12px">
+              Temperature: <span id="tempVal">0.4</span>
+            </label>
+            <input
+              type="range" id="temperature"
+              min="0" max="1" step="0.05" value="0.4"
+              style="width: 100%"
+            />
+
+            <div class="actions" style="margin-top: 12px">
+              <button id="testBtn" class="ghost">🔌 Test Connection</button>
+            </div>
+            <div id="testStatus" class="status"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top: 20px">
+        <section class="card">
+          <h2><span class="dot"></span>Inputs</h2>
+
+          <div class="row">
+            <div>
+              <label for="testType">Test Type</label>
+              <select id="testType">
+                <option value="none">None</option>
+                <option value="functional">Functional</option>
+                <option value="sit">System Integration (SIT)</option>
+                <option value="e2e">End-to-End</option>
+                <option value="performance">Performance</option>
+                <option value="security">Security</option>
+                <option value="mixed">Mixed coverage (all types)</option>
+              </select>
+            </div>
+            <div>
+              <label for="domain">Domain</label>
+              <select id="domain">
+                <option value="none">None</option>
+                <option value="scc_b2c">Salesforce Commerce Cloud — B2C</option>
+                <option value="scc_b2b">Salesforce Commerce Cloud — B2B</option>
+                <option value="mobile">Mobile App (iOS / Android)</option>
+                <option value="api">API / Microservices</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="persona">Persona</label>
+          <input id="persona" type="text" placeholder="e.g. Returning customer on mobile web" />
+
+          <label for="story">User Story</label>
+          <textarea id="story" placeholder="As a [persona], I want [goal] so that [benefit]."></textarea>
+
+          <label for="ac">Acceptance Criteria</label>
+          <textarea id="ac" placeholder="Given ... When ... Then ...&#10;(Paste all ACs here — bullets, Gherkin, or paragraphs all work.)"></textarea>
+
+          <label for="customPrompt">
+            Additional Instructions
+            <span style="color:var(--muted);font-weight:400;font-size:11px">
+              (optional — tweak how this generation behaves; the column contract is always preserved)
+            </span>
+          </label>
+          <textarea
+            id="customPrompt"
+            placeholder="e.g. Focus on negative and security scenarios. Add API-level tests alongside UI. Use Playwright-style step phrasing. Use British English."
+            style="min-height: 70px"
+          ></textarea>
+
+          <label for="screenshotInput" style="margin-top: 12px">
+            Reference Screenshots
+            <span style="color:var(--muted);font-weight:400;font-size:11px">
+              (optional — upload, paste, or drag-and-drop Figma / UI screenshots to ground test cases in the visuals)
+            </span>
+          </label>
+          <div id="screenshotDrop" class="screenshot-drop">
+            <input id="screenshotInput" type="file" accept="image/*" multiple hidden />
+            <p>📎 Click to upload · Paste (Cmd/Ctrl+V anywhere) · or drop images here</p>
+            <p class="tiny">Up to 5 images · auto-resized to ≤ 1568px · vision-capable model required (Claude · GPT-4o · Gemini Pro · Llama 4)</p>
+          </div>
+          <div id="screenshotPreviews" class="screenshot-previews"></div>
+          <div id="screenshotWarn" class="screenshot-warn" style="display:none"></div>
+
+          <div class="actions">
+            <button id="generateBtn" class="primary">Generate Test Cases</button>
+            <button id="stopBtn" class="ghost stop-btn" style="display:none" title="Cancel the in-flight generation request">⏹ Stop</button>
+            <button id="clearBtn" class="ghost">Clear</button>
+            <button id="sampleBtn" class="ghost">Load Sample</button>
+          </div>
+          <div id="status" class="status"></div>
+        </section>
+
+        <section class="card right-card">
+          <h2><span class="dot"></span>Generated Test Cases</h2>
+
+          <div class="result-toolbar">
+            <div class="tabs">
+              <button class="tab active" data-view="table">Table</button>
+              <button class="tab" data-view="markdown">Markdown</button>
+              <span id="genTimer" class="gen-timer" aria-live="polite" title="Generation time">
+                <span class="gen-timer-dot"></span>
+                <span id="genTimerLabel">0.0s</span>
+              </span>
+            </div>
+            <div class="actions" style="margin-top: 0">
+              <button id="editModeBtn" class="icon-btn" title="Edit mode — click cells to edit, delete expected results to remove paired step" aria-label="Edit mode">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M14.06 6.19l3.75 3.75-9.55 9.56H4.5v-3.76l9.56-9.55zm1.06-1.06l1.94-1.94a1.5 1.5 0 0 1 2.12 0l1.64 1.64a1.5 1.5 0 0 1 0 2.12l-1.94 1.94-3.76-3.76z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button id="revertBtn" class="icon-btn danger-hover" title="Revert — discard all edits and restore the table to how it was when you entered edit mode" aria-label="Revert edits" style="display:none">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M4 4v6h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M4 10a8 8 0 1 1 2.34 5.66" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button id="saveBtn" class="icon-btn primary" title="Save — commit all edits and exit edit mode" aria-label="Save changes" style="display:none">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M5 12l5 5 9-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button id="copyBtn" class="icon-btn" disabled title="Copy entire test script (Markdown) to clipboard" aria-label="Copy test script">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <rect x="8" y="3" width="13" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                  <path d="M5 7v12a2 2 0 0 0 2 2h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </button>
+              <div class="download-menu" data-open="false">
+                <button id="downloadBtn" class="icon-btn" disabled title="Download test cases" aria-label="Download" aria-haspopup="true" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                    <path d="M12 3v12m-5-5l5 5 5-5M4 19h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg class="chevron" viewBox="0 0 24 24" width="10" height="10" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <div class="download-dropdown" role="menu" aria-label="Download format">
+                  <button id="downloadCsvBtn" class="dd-item" role="menuitem" disabled>
+                    <span class="dd-format">CSV</span><span class="dd-ext">.csv</span>
+                  </button>
+                  <button id="downloadXlsxBtn" class="dd-item" role="menuitem" disabled>
+                    <span class="dd-format">Excel</span><span class="dd-ext">.xlsx</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="resultPane" class="result-pane">
+            <div class="empty">
+              <div>
+                <div class="big">🧪</div>
+                Fill in Persona, User Story, and Acceptance Criteria,<br />
+                then click <strong>Generate Test Cases</strong>.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="footer">
+        Runs entirely in your browser. Your API key and inputs never leave your machine except for the
+        direct call to the selected provider's API.
+      </div>
+    </div>
+
+    <script>
+      // ----- Login gate (frontend-only) --------------------------------------
+      const AUTH = (() => {
+        const USERNAME = "QATC1234";
+        const PASSWORD = "QATC1234";
+        const KEY = "ac2tc.auth";
+        let bypass = false;
+        try {
+          bypass = new URL(window.location.href).searchParams.get("bypass") === PASSWORD;
+        } catch (_) { bypass = false; }
+        const sessionOk = () => {
+          try { return sessionStorage.getItem(KEY) === "ok"; } catch (_) { return false; }
+        };
+        return {
+          isAuthed: () => bypass || sessionOk(),
+          USERNAME, PASSWORD,
+          markAuthed() { try { sessionStorage.setItem(KEY, "ok"); } catch (_) {} },
+          signOut() { try { sessionStorage.removeItem(KEY); } catch (_) {} },
+        };
+      })();
+      document.addEventListener("DOMContentLoaded", () => {
+        const backdrop = document.getElementById("authBackdrop");
+        const form = document.getElementById("authForm");
+        const userIn = document.getElementById("authUser");
+        const passIn = document.getElementById("authPass");
+        const err = document.getElementById("authError");
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (!backdrop || !form) return;
+        const reveal = () => { backdrop.hidden = false; if (logoutBtn) logoutBtn.style.display = "none"; setTimeout(() => userIn && userIn.focus(), 30); };
+        const dismiss = () => { backdrop.hidden = true; if (logoutBtn) logoutBtn.style.display = ""; };
+        if (!AUTH.isAuthed()) reveal(); else dismiss();
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const u = (userIn.value || "").trim();
+          const p = passIn.value || "";
+          if (u === AUTH.USERNAME && p === AUTH.PASSWORD) {
+            err.textContent = "";
+            AUTH.markAuthed();
+            passIn.value = "";
+            dismiss();
+          } else {
+            err.textContent = "Invalid username or password.";
+            passIn.focus(); passIn.select();
+          }
+        });
+        if (logoutBtn) {
+          logoutBtn.addEventListener("click", () => { AUTH.signOut(); window.location.reload(); });
+        }
+      });
+
+      // ----------------------------------------------------------------------
+      // Provider catalog
+      // ----------------------------------------------------------------------
+      const PROVIDERS = {
+        anthropic: {
+          id: "anthropic",
+          label: "Anthropic (Claude)",
+          keyPrefix: "sk-ant-",
+          keyHelpUrl: "https://console.anthropic.com/settings/keys",
+          keyHelpLabel: "console.anthropic.com",
+          keyPlaceholder: "sk-ant-...",
+          defaultModel: "claude-opus-4-7",
+          visionModels: "*",
+          models: [
+            "claude-opus-4-7",
+            "claude-opus-4-5",
+            "claude-opus-4-1",
+            "claude-sonnet-4-5",
+            "claude-3-5-sonnet-latest",
+            "claude-3-5-haiku-latest",
+          ],
+        },
+        gemini: {
+          id: "gemini",
+          label: "Google Gemini",
+          keyPrefix: "AIza",
+          keyHelpUrl: "https://aistudio.google.com/app/apikey",
+          keyHelpLabel: "Google AI Studio",
+          keyPlaceholder: "AIza...",
+          defaultModel: "gemini-2.5-flash",
+          visionModels: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+          models: [
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-8b",
+            "gemini-1.5-pro",
+          ],
+        },
+        groq: {
+          id: "groq",
+          label: "Groq (Llama / DeepSeek — free)",
+          keyPrefix: "gsk_",
+          keyHelpUrl: "https://console.groq.com/keys",
+          keyHelpLabel: "console.groq.com",
+          keyPlaceholder: "gsk_...",
+          defaultModel: "llama-3.3-70b-versatile",
+          visionModels: ["meta-llama/llama-4-scout-17b-16e-instruct", "meta-llama/llama-4-maverick-17b-128e-instruct"],
+          models: [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "deepseek-r1-distill-llama-70b",
+            "gemma2-9b-it",
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+          ],
+        },
+      };
+
+      const CUSTOM_MODEL_VALUE = "__custom__";
+
+      // ----------------------------------------------------------------------
+      // Storage helpers (per-provider key storage)
+      // ----------------------------------------------------------------------
+      const LS = {
+        provider: "ac2tc.provider",
+        modelPrefix: "ac2tc.model.",
+        customModelPrefix: "ac2tc.customModel.",
+        keyPrefix: "ac2tc.key.",
+        temperature: "ac2tc.temperature",
+        persona: "ac2tc.persona",
+        customPrompt: "ac2tc.customPrompt",
+        testType: "ac2tc.testType",
+        domain: "ac2tc.domain",
+        story: "ac2tc.story",
+        ac: "ac2tc.ac",
+        lastMd: "ac2tc.lastMd",
+      };
+
+      const $ = (id) => document.getElementById(id);
+
+      // ----------------------------------------------------------------------
+      // Element refs
+      // ----------------------------------------------------------------------
+      const providerEl = $("provider");
+      const modelEl = $("model");
+      const customModelWrap = $("customModelWrap");
+      const customModelEl = $("customModel");
+      const apiKeyEl = $("apiKey");
+      const apiKeyLabel = $("apiKeyLabel");
+      const apiKeyHint = $("apiKeyHint");
+      const togglePw = $("togglePw");
+      const tempEl = $("temperature");
+      const tempVal = $("tempVal");
+      const modelBadge = $("modelBadge");
+      const personaEl = $("persona");
+      const storyEl = $("story");
+      const acEl = $("ac");
+      const customPromptEl = $("customPrompt");
+      const testTypeEl = $("testType");
+      const domainEl = $("domain");
+      const generateBtn = $("generateBtn");
+      const genTimer = $("genTimer");
+      const genTimerLabel = $("genTimerLabel");
+
+      const Timer = (() => {
+        let startedAt = 0;
+        let intervalId = null;
+        const fmt = (ms) => {
+          if (ms < 1000) return ms + "ms";
+          if (ms < 60_000) return (ms / 1000).toFixed(1) + "s";
+          const m = Math.floor(ms / 60_000);
+          const s = ((ms % 60_000) / 1000).toFixed(1);
+          return `${m}m ${s}s`;
+        };
+        const tick = () => {
+          genTimerLabel.textContent = fmt(performance.now() - startedAt);
+        };
+        return {
+          start(prefix = "") {
+            startedAt = performance.now();
+            genTimer.classList.remove("done", "error");
+            genTimer.classList.add("show", "running");
+            genTimer.dataset.prefix = prefix;
+            genTimerLabel.textContent = (prefix ? prefix + " " : "") + "0.0s";
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(() => {
+              const ms = performance.now() - startedAt;
+              const p = genTimer.dataset.prefix || "";
+              genTimerLabel.textContent = (p ? p + " " : "") + fmt(ms);
+            }, 100);
+            return startedAt;
+          },
+          stop(state /* "done" | "error" */) {
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+            const ms = startedAt ? performance.now() - startedAt : 0;
+            genTimer.classList.remove("running");
+            genTimer.classList.add("show", state === "error" ? "error" : "done");
+            const p = genTimer.dataset.prefix || "";
+            genTimerLabel.textContent = (p ? p + " " : "") + fmt(ms);
+            return ms;
+          },
+          reset() {
+            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+            startedAt = 0;
+            genTimer.classList.remove("show", "running", "done", "error");
+            genTimer.dataset.prefix = "";
+            genTimerLabel.textContent = "0.0s";
+          },
+          fmt,
+        };
+      })();
+      const clearBtn = $("clearBtn");
+      const sampleBtn = $("sampleBtn");
+      const statusEl = $("status");
+      const resultPane = $("resultPane");
+      const editModeBtn = $("editModeBtn");
+      const copyBtn = $("copyBtn");
+      const downloadCsvBtn = $("downloadCsvBtn");
+      const downloadXlsxBtn = $("downloadXlsxBtn");
+      const settingsDetails = $("settingsDetails");
+      const settingsBody = $("settingsBody");
+      const testBtn = $("testBtn");
+      const testStatus = $("testStatus");
+
+      settingsDetails.addEventListener("toggle", () => {
+        settingsBody.style.display = settingsDetails.open ? "block" : "none";
+      });
+
+      // ----------------------------------------------------------------------
+      // Provider/model wiring
+      // ----------------------------------------------------------------------
+      function currentProvider() {
+        return PROVIDERS[providerEl.value];
+      }
+
+      function effectiveModel() {
+        if (modelEl.value === CUSTOM_MODEL_VALUE) return customModelEl.value.trim();
+        return modelEl.value;
+      }
+
+      function populateProviders() {
+        providerEl.innerHTML = "";
+        for (const [id, cfg] of Object.entries(PROVIDERS)) {
+          const opt = document.createElement("option");
+          opt.value = id;
+          opt.textContent = cfg.label;
+          providerEl.appendChild(opt);
+        }
+      }
+
+      function populateModels(cfg, preferred) {
+        modelEl.innerHTML = "";
+        cfg.models.forEach((m) => {
+          const opt = document.createElement("option");
+          opt.value = m;
+          opt.textContent = m;
+          modelEl.appendChild(opt);
+        });
+        const customOpt = document.createElement("option");
+        customOpt.value = CUSTOM_MODEL_VALUE;
+        customOpt.textContent = "✎ Custom model…";
+        modelEl.appendChild(customOpt);
+
+        const saved = preferred || localStorage.getItem(LS.modelPrefix + cfg.id);
+        if (saved && (cfg.models.includes(saved) || saved === CUSTOM_MODEL_VALUE)) {
+          modelEl.value = saved;
+        } else if (saved) {
+          // Saved a non-list value previously: treat as custom
+          modelEl.value = CUSTOM_MODEL_VALUE;
+          customModelEl.value = saved;
+        } else {
+          modelEl.value = cfg.defaultModel;
+        }
+        updateCustomVisibility();
+        updateBadge();
+      }
+
+      function updateCustomVisibility() {
+        const isCustom = modelEl.value === CUSTOM_MODEL_VALUE;
+        customModelWrap.style.display = isCustom ? "block" : "none";
+        if (isCustom) {
+          const savedCustom = localStorage.getItem(
+            LS.customModelPrefix + currentProvider().id
+          );
+          if (savedCustom && !customModelEl.value) customModelEl.value = savedCustom;
+        }
+      }
+
+      function updateBadge() {
+        const m = effectiveModel();
+        modelBadge.textContent = m || "no model";
+      }
+
+      function applyProvider(cfg) {
+        apiKeyLabel.textContent = cfg.label + " API Key";
+        apiKeyEl.placeholder = cfg.keyPlaceholder;
+        apiKeyHint.innerHTML =
+          'Get a key at <a href="' +
+          cfg.keyHelpUrl +
+          '" target="_blank" rel="noopener">' +
+          cfg.keyHelpLabel +
+          "</a>. Stored only in your browser's localStorage.";
+        apiKeyEl.value = localStorage.getItem(LS.keyPrefix + cfg.id) || "";
+        populateModels(cfg);
+      }
+
+      providerEl.addEventListener("change", () => {
+        const cfg = currentProvider();
+        localStorage.setItem(LS.provider, cfg.id);
+        applyProvider(cfg);
+      });
+
+      modelEl.addEventListener("change", () => {
+        const cfg = currentProvider();
+        localStorage.setItem(LS.modelPrefix + cfg.id, modelEl.value);
+        updateCustomVisibility();
+        updateBadge();
+      });
+
+      customModelEl.addEventListener("input", () => {
+        const cfg = currentProvider();
+        localStorage.setItem(LS.customModelPrefix + cfg.id, customModelEl.value);
+        updateBadge();
+      });
+
+      apiKeyEl.addEventListener("input", () => {
+        const cfg = currentProvider();
+        localStorage.setItem(LS.keyPrefix + cfg.id, apiKeyEl.value);
+      });
+
+      togglePw.addEventListener("click", () => {
+        const isPw = apiKeyEl.type === "password";
+        apiKeyEl.type = isPw ? "text" : "password";
+        togglePw.textContent = isPw ? "Hide" : "Show";
+      });
+
+      // ----------------------------------------------------------------------
+      // Restore non-provider state
+      // ----------------------------------------------------------------------
+      tempEl.value = localStorage.getItem(LS.temperature) || "0.4";
+      tempVal.textContent = Number(tempEl.value).toFixed(2);
+      personaEl.value = localStorage.getItem(LS.persona) || "";
+      storyEl.value = localStorage.getItem(LS.story) || "";
+      acEl.value = localStorage.getItem(LS.ac) || "";
+      customPromptEl.value = localStorage.getItem(LS.customPrompt) || "";
+      testTypeEl.value = localStorage.getItem(LS.testType) || "functional";
+      domainEl.value = localStorage.getItem(LS.domain) || "generic";
+
+      const bindSave = (el, key) => {
+        el.addEventListener("input", () => localStorage.setItem(key, el.value));
+        el.addEventListener("change", () => localStorage.setItem(key, el.value));
+      };
+      bindSave(personaEl, LS.persona);
+      bindSave(storyEl, LS.story);
+      bindSave(acEl, LS.ac);
+      bindSave(customPromptEl, LS.customPrompt);
+      bindSave(testTypeEl, LS.testType);
+      bindSave(domainEl, LS.domain);
+
+      tempEl.addEventListener("input", () => {
+        const v = Number(tempEl.value).toFixed(2);
+        tempVal.textContent = v;
+        localStorage.setItem(LS.temperature, tempEl.value);
+      });
+
+      populateProviders();
+      const savedProvider = localStorage.getItem(LS.provider) || "anthropic";
+      providerEl.value = PROVIDERS[savedProvider] ? savedProvider : "anthropic";
+      applyProvider(currentProvider());
+
+      if (!apiKeyEl.value) {
+        settingsDetails.open = true;
+        settingsBody.style.display = "block";
+      }
+
+      // ----------------------------------------------------------------------
+      // Tabs
+      // ----------------------------------------------------------------------
+      if (new URLSearchParams(location.search).get("demo") === "1") {
+        const demoMd = `| TC ID | TestcaseName | Objective | Pre-Conditions | Steps | Expected Result |
+| --- | --- | --- | --- | --- | --- |
+| TC01 | Apply valid promo code | Verify a valid promo applies the correct discount and confirmation message at checkout | Promo "SAVE10" active; user logged in; cart subtotal $80 | 1. Navigate to /checkout<br>2. Enter "SAVE10" in promo field<br>3. Click Apply | 1. /checkout page renders<br>2. "SAVE10" appears in the promo field<br>3. 10% discount line shown; toast "Promo applied" |
+| TC02 | Reject invalid promo code | Verify the system surfaces a clear error for unknown promo codes without applying any discount | User on /checkout | 1. Navigate to /checkout<br>2. Enter "NOPE" in promo field<br>3. Click Apply | 1. /checkout page loads<br>2. "NOPE" entered<br>3. Inline error "Invalid or expired code"; no discount applied |
+| TC03 | Enforce minimum order threshold | Verify promo with minimum order value is blocked when subtotal is below the threshold | Promo "SAVE10" requires $50 min; cart subtotal $30 | 1. Navigate to /checkout<br>2. Enter "SAVE10"<br>3. Click Apply | 1. /checkout page renders<br>2. "SAVE10" entered<br>3. Inline message "Minimum order value not met"; no discount |`;
+        localStorage.setItem("ac2tc.lastMd", demoMd);
+      }
+
+      let lastMarkdown = localStorage.getItem(LS.lastMd) || "";
+      let currentView = "table";
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          currentView = tab.dataset.view;
+          renderResult();
+        });
+      });
+
+      // ----------------------------------------------------------------------
+      // Sample & clear
+      // ----------------------------------------------------------------------
+      sampleBtn.addEventListener("click", () => {
+        personaEl.value = "Registered customer on the e-commerce checkout page";
+        storyEl.value =
+          "As a registered customer, I want to apply a promo code at checkout so that I can receive the appropriate discount on my order.";
+        acEl.value = `1. Given I am on the checkout page, when I enter a valid promo code "SAVE10" and click Apply, then a 10% discount is applied to the order subtotal and a success message "Promo applied" is shown.
+2. Given the promo code is invalid or expired, when I click Apply, then an inline error "Invalid or expired code" is shown and no discount is applied.
+3. Given a promo code has a minimum order value of $50, when the current subtotal is below $50, then the system shows "Minimum order value not met" and does not apply the discount.
+4. Only one promo code can be active per order. Applying a new valid code replaces the previously applied one.
+5. The promo code field is case-insensitive and trims leading/trailing whitespace.
+6. After a successful payment, the applied promo code is shown on the order confirmation page and emailed receipt.`;
+        ["persona", "story", "ac"].forEach((k) => localStorage.setItem(LS[k], $(k).value));
+        setStatus("Sample loaded.", "success");
+      });
+
+      clearBtn.addEventListener("click", () => {
+        if (!confirm("Clear all inputs and the generated result?")) return;
+        personaEl.value = "";
+        storyEl.value = "";
+        acEl.value = "";
+        customPromptEl.value = "";
+        testTypeEl.value = "functional";
+        domainEl.value = "generic";
+        lastMarkdown = "";
+        [LS.persona, LS.story, LS.ac, LS.customPrompt, LS.testType, LS.domain, LS.lastMd].forEach(
+          (k) => localStorage.removeItem(k)
+        );
+        setStatus("Cleared.");
+        Timer.reset();
+        renderResult();
+        updateActionButtons();
+      });
+
+      function setStatus(msg, kind = "") {
+        statusEl.className = "status " + kind;
+        statusEl.textContent = msg;
+      }
+      function setTestStatus(msg, kind = "") {
+        testStatus.className = "status " + kind;
+        testStatus.textContent = msg;
+      }
+
+      // ----------------------------------------------------------------------
+      // Prompt
+      // ----------------------------------------------------------------------
+      const SYSTEM_PROMPT =
+        "You are a Senior QA Automation Engineer. Always respond with only the requested Markdown table — no prose, no headings before or after.";
+
+      // -------- Test Type + Domain guidance registries --------
+      const TEST_TYPE_GUIDANCE = {
+        none: "",
+        functional:
+          "Generate FUNCTIONAL test cases. Verify the system behaves correctly per the AC. Include positive (happy path), negative, boundary, validation, and edge case scenarios.",
+        sit:
+          "Generate SYSTEM INTEGRATION (SIT) test cases. Focus on integration boundaries: data flow between systems, API/event contracts, request/response/message schema validation, error propagation across services, retry/timeout/circuit-breaker behavior, eventual consistency across downstream systems, idempotency, and reconciliation. Include both success-path and failure-mode scenarios across system boundaries. Each TC must explicitly name the systems involved (e.g., Frontend → OMS → ERP) and the integration point under test.",
+        e2e:
+          "Generate END-TO-END (E2E) test cases. Each TC must traverse a complete user journey across multiple screens / services / personas (e.g., browse → add to cart → checkout → payment → order confirmation → email → order history). Avoid testing single components in isolation. Include cross-channel and multi-step journeys, and verify downstream side-effects (emails, notifications, inventory decrement, order events).",
+        performance:
+          "Generate PERFORMANCE test cases. Target response time, throughput, concurrency, sustained load, spike load, soak/endurance, and graceful degradation. Each TC MUST specify: load profile (concurrent users, ramp-up, duration), workload mix, performance acceptance criteria (e.g., p95 < 2s, error rate < 1%, throughput >= N rps), and monitoring metrics to capture (CPU, memory, GC, DB connection pool, queue depth). Pre-Conditions must include test environment sizing and data volume baseline.",
+        security:
+          "Generate SECURITY test cases covering OWASP-style risks relevant to the AC. Include: authentication bypass / weak credentials / MFA bypass, authorization & privilege escalation (IDOR, horizontal/vertical), input validation (XSS reflected & stored, SQLi, command injection, SSRF, XXE), CSRF, session management (fixation, hijacking, timeout), sensitive data exposure (PII in logs/URLs/responses), insecure direct object reference, broken access control, rate limiting & brute-force protection, security headers, and dependency / known-CVE exposure. Each TC should state the threat being tested and the expected mitigation.",
+        mixed:
+          "Generate a BALANCED MIX of test types covering the AC: functional, integration (SIT), end-to-end, performance, and security. Use the Objective column to indicate the test type for each row (e.g., '[FUNC]', '[SIT]', '[E2E]', '[PERF]', '[SEC]'). Aim for solid coverage across all five types rather than depth in any one.",
+      };
+      const DOMAIN_GUIDANCE = {
+        none: "",
+        generic: "",
+        scc_b2c:
+          "Domain: Salesforce Commerce Cloud — B2C (SFRA / PWA Kit / Composable Storefront). Anchor scenarios in B2C shopper journeys: catalog browse & search, faceted refinements, PDP (variants, swatches, inventory ATS), add-to-cart, mini-cart / basket, guest vs registered checkout, multiple shipping methods, multiple payment methods (cards, PayPal, Apple Pay, gift cards, store credit), promo codes / coupons / qualifier-based promotions, AB tests / personalization slots / Einstein recommendations, order confirmation email, order history & re-order. Pre-Conditions MUST reference Business Manager configurations where relevant (catalogs, price books, promotions, payment methods, shipping methods, sites, locales, customer groups, AB tests, Page Designer pages, content slots).",
+        scc_b2b:
+          "Domain: Salesforce Commerce Cloud — B2B (B2B Commerce on Lightning, B2B2C, or B2B on SFRA). Anchor scenarios in B2B buyer journeys: account-based / entitlement-based pricing, contract pricing & price lists, bulk / pallet / pack-size quantities, quick order / order pad, CSV upload & reorder, requisition lists / saved carts, quotes & quote-to-cart, approval workflows (single and multi-level), account hierarchies and buyer roles (Admin / Buyer / Manager / Approver), invoice & purchase order payment, tax exemption certificates, contract-specific catalogs / product visibility. Pre-Conditions MUST reference Store / Account / Buyer Group / Price List / Entitlement Policy configurations.",
+        sap_commerce:
+          "Domain: SAP Commerce Cloud (formerly Hybris). Anchor scenarios in SmartEdit / Backoffice configurations, CMS components & content catalogs, classifications, base sites & base stores, price rows & promotion engine rules (incl. voucher restrictions), B2B unit hierarchies & approval flows, OMS / ERP / CRM integration, Adaptive Search, and personalization. Pre-Conditions MUST reference content/product catalog versions, base site, store, and any active modules.",
+        banking:
+          "Domain: Banking / Fintech. Anchor scenarios in regulated flows: account opening (KYC / AML), authentication (MFA, step-up auth, biometrics), funds transfer (intrabank, ACH, wire, real-time payments), payee management, statement & e-disclosure delivery, fraud / risk hold scenarios, transaction limits & cut-off times, regulatory consent capture, and audit logging. Treat money movement, PII, and compliance evidence with extra rigor — every TC must include verification of audit-trail entries where applicable.",
+        healthcare:
+          "Domain: Healthcare. Anchor scenarios in HIPAA-aware flows: patient registration, consent capture, appointment scheduling, clinical data viewing (with role-based access), prescription / order entry, EHR/EMR integration, lab result delivery, secure messaging, audit logging, and break-glass access. Treat PHI access, consent, and audit trail with extra rigor.",
+        saas:
+          "Domain: Generic SaaS web application. Anchor scenarios in tenant / workspace context: signup, plan & billing, subscription upgrades / downgrades, seat management, SSO / SAML / OIDC, RBAC, in-app notifications, integrations / webhooks, and multi-tenant data isolation.",
+        mobile:
+          "Domain: Native mobile (iOS / Android) or hybrid mobile app. Anchor scenarios in mobile-specific concerns: cold/warm start, deep links / universal links / app links, push notifications, offline mode & sync, OS permissions (camera, location, notifications, biometrics), app upgrade / forced update, background fetch, and orientation / responsive layouts. Note device + OS version in Pre-Conditions.",
+        api:
+          "Domain: Public API or internal microservice. Anchor scenarios in HTTP contract behavior: status codes, response schemas, pagination, idempotency keys, rate limiting, authentication (Bearer, mTLS, HMAC, OAuth2 flows), versioning, backward compatibility, retry / timeout behavior, and observability (correlation IDs, trace propagation). Pre-Conditions must include API base URL, auth setup, and any required upstream data.",
+      };
+
+      function buildPrompt(persona, story, ac, customInstructions, testType, domain, imageCount) {
+        const typeBlock = TEST_TYPE_GUIDANCE[testType]
+          ? `\n\nTEST TYPE FOCUS:\n${TEST_TYPE_GUIDANCE[testType]}\n`
+          : "";
+        const domainBlk = DOMAIN_GUIDANCE[domain]
+          ? `\n\nDOMAIN CONTEXT:\n${DOMAIN_GUIDANCE[domain]}\n`
+          : "";
+        const extras = (customInstructions || "").trim()
+          ? `\n\nADDITIONAL INSTRUCTIONS FROM THE QA LEAD (apply these alongside the rules above, but never violate the column contract or output format):\n${customInstructions.trim()}\n`
+          : "";
+        const ss = Number(imageCount) || 0;
+        const screenshotBlk = ss > 0
+          ? `\n\nATTACHED SCREENSHOTS:\n${ss} reference screenshot${ss === 1 ? "" : "s"} attached. Use ${ss === 1 ? "it" : "them"} as PRIMARY visual context:\n- Reference exact UI labels, button text, error messages, field names, and section titles as they appear in the image${ss === 1 ? "" : "s"}.\n- Each step MUST tie directly to what is shown — e.g., "Click the 'Add to cart' button (shown bottom-right of PDP)".\n- Expected Result MUST describe the VISUAL outcome (modal that opens, toast text, navigation target, validation message, etc.) — not just abstract behavior.\n- If the screenshots show multiple states (before/after, error/success, modal open/closed), generate test cases covering EACH state.\n- If a UI element is in the screenshot but not in the AC, still test it (negative cases, accessibility, edge states).\n`
+          : "";
+        return `You are a Senior QA Automation Engineer. Transform the provided Acceptance Criteria (AC) into comprehensive functional Test Cases.
+
+OUTPUT REQUIREMENTS:
+1. Format: Output ONLY a single GitHub-flavored Markdown table - no prose, no headings, no introductions, no closing remarks. Every row MUST start with "| " and end with " |" (pipe-bordered).
+2. Columns (in this exact order): TC ID | TestcaseName | Objective | Pre-Conditions | Steps | Expected Result
+3. Numbering: TC ID values must be TC01, TC02, TC03, ... (sequential, zero-padded to 2 digits). TestcaseName is a short descriptive title (3-7 words, action-oriented, no "TC" prefix), e.g. "Apply valid promo code".
+4. Language: Clear, professional, and action-oriented.
+5. Coverage: Include positive (happy path), negative, boundary, validation, and edge case scenarios derived from the AC.
+6. Pre-Conditions: Must cover data setup (e.g., CMS configs, feature flags, user state, prior data, environment).
+7. Steps: Must be granular and easy to follow. Use a numbered list within the cell ("1. Do X<br>2. Do Y<br>3. Click Z"). Use <br> for line breaks inside table cells.
+8. Expected Result: Use the SAME numbering as Steps. Each numbered Expected Result MUST correspond to the step at the same position (e.g., '1. expected for step 1<br>2. expected for step 2<br>3. expected for step 3'). Reference exact messages, states, or values where given. Pair count MUST match the Steps count.
+9. Do NOT escape pipe characters inside cells - instead rephrase to avoid them, or use "or" / commas.
+10. Return the table and nothing else.${typeBlock}${domainBlk}${extras}${screenshotBlk}
+
+INPUT:
+Persona: ${persona}
+
+User Story:
+${story}
+
+Acceptance Criteria:
+${ac}
+
+Generate the Markdown table now.`;
+      }
+
+      // ----------------------------------------------------------------------
+      // Provider callers (direct from browser)
+      // ----------------------------------------------------------------------
+      function safeError(raw) {
+        try {
+          const j = JSON.parse(raw);
+          return j?.error?.message || j?.message || raw.slice(0, 500);
+        } catch {
+          return raw.slice(0, 500);
+        }
+      }
+
+      function mapError(providerId, status, raw, model) {
+        let parsed = {};
+        try { parsed = JSON.parse(raw); } catch (_) { /* ignore */ }
+        const msg = (parsed?.error?.message || parsed?.message || raw || "").toString();
+        const code = parsed?.error?.type || parsed?.error?.code || "";
+
+        if (providerId === "anthropic") {
+          if (status === 401) return "Anthropic rejected the key (401). The Anthropic API Key in Settings must start with `sk-ant-` and have no whitespace.";
+          if (status === 404 && /model/i.test(msg)) return `Anthropic doesn't recognize model "${model}". Try \`claude-opus-4-7\` or \`claude-sonnet-4-5\` in Settings → Model.`;
+          if (status === 429) return "Anthropic rate limit. Wait a few seconds and retry, or switch to `claude-3-5-haiku-latest`.";
+          if (status === 400 && /credit|billing/i.test(msg)) return "Anthropic account is out of credits. Add billing at https://console.anthropic.com/settings/billing .";
+          if (status >= 500) return `Anthropic is having a temporary outage (${status}). Retry shortly.`;
+          return `Anthropic ${status}: ${msg || raw}`;
+        }
+
+        if (providerId === "groq") {
+          if (status === 401)
+            return "Groq rejected the API key (401). Verify the key in Settings starts with `gsk_`. Get a fresh key at https://console.groq.com/keys .";
+          if (status === 404 && /model/i.test(msg))
+            return `Groq doesn't recognize model "${model}". In Settings → Model, pick \`llama-3.3-70b-versatile\` and retry.`;
+          if (status === 413 || /context|max.*tokens|too.*long/i.test(msg))
+            return "Groq rejected the request: prompt + max_tokens too large for this model. Try shorter input or pick `llama-3.1-8b-instant`.";
+          if (status === 429)
+            return "Groq rate limit hit (free-tier RPM ~30). Wait a few seconds and retry, switch Model to `llama-3.1-8b-instant`, or attach billing at https://console.groq.com/settings/billing .";
+          if (status === 503 || /unavailable|overloaded/i.test(msg))
+            return "Groq is temporarily overloaded. Retry shortly or switch Model to `llama-3.1-8b-instant`.";
+          if (status >= 500) return `Groq is having a temporary outage (${status}). Retry shortly.`;
+          return `Groq ${status}: ${msg || raw}`;
+        }
+        if (providerId === "gemini") {
+          if (status === 400 && /api[_ ]?key[_ ]?(not[_ ]?valid|invalid)/i.test(msg)) return "Gemini rejected the API key. Re-check it in Settings (no quotes, no spaces).";
+          if (status === 403 && /(has not been used|api( is)? disabled|enable( the)? api)/i.test(msg)) return "Generative Language API is not enabled for this key's Cloud project. Enable it at https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com .";
+          if (status === 403) return `Gemini denied the request (403): ${msg}. Try generating a fresh unrestricted key at https://aistudio.google.com/app/apikey .`;
+          if (status === 404 && /model/i.test(msg)) return `Gemini doesn't recognize model "${model}". Try \`gemini-2.5-flash\` in Settings.`;
+          if (status === 429) {
+            const isLight = /(lite|8b|flash-8b)/i.test(model);
+            const isDaily = /daily|day|requests per day|RPD/i.test(msg);
+            const parts = [];
+            parts.push(isDaily
+              ? "Gemini DAILY free-tier quota exhausted (resets ~midnight Pacific)."
+              : "Gemini rate limit hit (free-tier RPM). Wait ~60 seconds and retry."
+            );
+            if (!isLight) parts.push("Or switch to a lighter model: `gemini-2.0-flash-lite` or `gemini-1.5-flash-8b` (higher free-tier quotas).");
+            parts.push("Easiest fix: switch Provider to Anthropic (Claude) in Settings.");
+            parts.push("Permanent fix: enable billing at https://aistudio.google.com/app/apikey — paid tier RPM is ~100× higher.");
+            return parts.join(" ");
+          }
+          if (status >= 500) return `Gemini is having a temporary outage (${status}). Retry shortly.`;
+          return `Gemini ${status}: ${msg || raw}`;
+        }
+
+        return `${providerId} ${status}: ${msg || raw}`;
+      }
+
+      async function callAnthropic({ apiKey, model, temperature, prompt, images = [], maxTokens = 8192, signal = undefined }) {
+        const content = [
+          ...(images || []).map((img) => ({
+            type: "image",
+            source: { type: "base64", media_type: img.mimeType, data: img.base64 },
+          })),
+          { type: "text", text: prompt },
+        ];
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          signal,
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            // Required to allow direct browser-origin calls.
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            temperature,
+            system: SYSTEM_PROMPT,
+            messages: [{ role: "user", content }],
+          }),
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(mapError("anthropic", res.status, text, model));
+        const json = JSON.parse(text);
+        const out = json?.content?.map((c) => c.text || "").join("") || "";
+        if (!out) {
+          const stop = json?.stop_reason;
+          throw new Error(
+            "Anthropic returned an empty response" + (stop ? ` (stop_reason: ${stop})` : "") + "."
+          );
+        }
+        return out;
+      }
+
+      async function callGemini({
+        apiKey,
+        model,
+        temperature,
+        prompt,
+        images = [],
+        maxOutputTokens = 16384,
+        disableThinking = false,
+        signal = undefined,
+      }) {
+        const url =
+          "https://generativelanguage.googleapis.com/v1beta/models/" +
+          encodeURIComponent(model) +
+          ":generateContent?key=" +
+          encodeURIComponent(apiKey);
+
+        const generationConfig = { temperature, topP: 0.95, maxOutputTokens };
+        // Gemini 2.5 Flash/Flash-Lite have "thinking" on by default and
+        // thinking tokens count against maxOutputTokens. For tiny pings
+        // (e.g. Test Connection) the model can burn the whole budget on
+        // thinking and emit nothing -> finishReason: MAX_TOKENS. Disable
+        // it on Flash variants when the caller asks. (Pro can't disable.)
+        if (disableThinking && /^gemini-2\.5-flash/i.test(model)) {
+          generationConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
+        const parts = [
+          ...(images || []).map((img) => ({
+            inlineData: { mimeType: img.mimeType, data: img.base64 },
+          })),
+          { text: prompt },
+        ];
+        const res = await fetch(url, {
+          method: "POST",
+          signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts }],
+            generationConfig,
+          }),
+        });
+        const text = await res.text();
+        if (!res.ok) throw new Error(mapError("gemini", res.status, text, model));
+        const json = JSON.parse(text);
+        const finishReason = json?.candidates?.[0]?.finishReason;
+        const out =
+          json?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
+        if (!out) {
+          if (finishReason === "SAFETY")
+            throw new Error("Gemini blocked the response for safety reasons. Try rephrasing the input.");
+          if (finishReason === "MAX_TOKENS")
+            throw new Error(
+              `Gemini hit the ${maxOutputTokens}-token output limit before emitting any visible text. ` +
+                "This usually means the model spent its budget on internal 'thinking'. " +
+                "Try increasing the budget, or in Settings → Model pick `gemini-2.5-flash` " +
+                "(the app disables thinking on Flash for short pings)."
+            );
+          throw new Error(
+            "Gemini returned an empty response" + (finishReason ? ` (finishReason: ${finishReason})` : "") + "."
+          );
+        }
+        return out;
+      }
+
+
+      async function callGroq({ apiKey, model, temperature, prompt, images = [], maxTokens = 8192, signal = undefined }) {
+        const userContent = (images && images.length)
+          ? [
+              ...images.map((img) => ({
+                type: "image_url",
+                image_url: { url: `data:${img.mimeType};base64,${img.base64}` },
+              })),
+              { type: "text", text: prompt },
+            ]
+          : prompt;
+        const res = await fetch(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model,
+              temperature,
+              max_tokens: maxTokens,
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: userContent },
+              ],
+            }),
+          }
+        );
+        const text = await res.text();
+        if (!res.ok) throw new Error(mapError("groq", res.status, text, model));
+        const json = JSON.parse(text);
+        let out = json?.choices?.[0]?.message?.content || "";
+        // DeepSeek-R1-Distill emits chain-of-thought between <think>...</think>
+        // tags. Strip them before the table parser ever sees the response.
+        out = out.replace(/<think>[\s\S]*?<\/think>\s*/gi, "");
+        if (!out) throw new Error("Groq returned an empty response.");
+        return out;
+      }
+
+      async function callProvider(opts) {
+        const cfg = currentProvider();
+        // Always pass opts through unchanged — each callX picks up `images` from it.
+        if (cfg.id === "anthropic") return callAnthropic(opts);
+        if (cfg.id === "gemini") return callGemini(opts);
+        if (cfg.id === "groq") return callGroq(opts);
+        throw new Error("Unsupported provider.");
+      }
+
+      // ----------------------------------------------------------------------
+      // Markdown helpers
+      // ----------------------------------------------------------------------
+      // Markdown table helpers — accept both pipe-bordered (| a | b |)
+      // and pipe-less (a | b) GitHub-flavored Markdown tables.
+      function isSeparatorRow(line) {
+        const t = line.trim().replace(/^\|/, "").replace(/\|$/, "").trim();
+        if (!t || !t.includes("-")) return false;
+        return t.split("|").every((cell) => /^\s*:?-{2,}:?\s*$/.test(cell));
+      }
+      function isTableRow(line) {
+        const t = line.trim();
+        return t.length > 0 && t.includes("|");
+      }
+      function splitRow(row) {
+        let s = row.trim();
+        if (s.startsWith("|")) s = s.slice(1);
+        if (s.endsWith("|")) s = s.slice(0, -1);
+        return s.split("|").map((c) => c.trim());
+      }
+
+      function extractMarkdownTable(text) {
+        const lines = text.split(/\r?\n/);
+        let start = -1;
+        for (let i = 0; i < lines.length - 1; i++) {
+          if (isTableRow(lines[i]) && isSeparatorRow(lines[i + 1])) {
+            start = i;
+            break;
+          }
+        }
+        if (start === -1) return text.trim();
+        const out = [];
+        for (let i = start; i < lines.length; i++) {
+          const t = lines[i].trim();
+          if (isTableRow(lines[i]) || isSeparatorRow(lines[i])) {
+            out.push(lines[i]);
+          } else if (t === "" && out.length > 2) {
+            break;
+          } else if (t !== "") {
+            break;
+          }
+        }
+        return out.join("\n").trim();
+      }
+
+      function parseMarkdownTable(md) {
+        const lines = md
+          .split(/\r?\n/)
+          .filter((l) => isTableRow(l) || isSeparatorRow(l));
+        if (lines.length < 2) return null;
+        const headers = splitRow(lines[0]);
+        const rows = lines
+          .slice(1)
+          .filter((l) => !isSeparatorRow(l))
+          .map(splitRow);
+        return { headers, rows };
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+      function cellToHtml(cell) {
+        return cell.split(/<br\s*\/?>(?:\s*)/i).map((p) => escapeHtml(p)).join("<br/>");
+      }
+      function renderTableHtml(parsed) {
+        if (!parsed) return `<pre class="raw">${escapeHtml(lastMarkdown)}</pre>`;
+        const { headers, rows } = parsed;
+        const ths = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+        const trs = rows.map(
+          (r) => `<tr>${r.map((c) => `<td>${cellToHtml(c)}</td>`).join("")}</tr>`
+        ).join("");
+        return `<div class="tc-scroll"><table class="tc-table"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+      }
+
+      // ---------------- Edit Mode ----------------
+      let editMode = false;
+
+      function isStepsHeader(h) {
+        return /step/i.test(h || "");
+      }
+      function isTCNameHeader(h) {
+        return /test\s*case\s*name|testcase\s*name|^tc\s*name/i.test(h || "");
+      }
+      // New (6-column) tables carry an explicit "TC ID" column. Older tables
+      // (5-column) put the TC01/TC02 ID into TestcaseName itself — keep that
+      // path alive in refreshTCNamesInDom for backward compat.
+      function isTCIDHeader(h) {
+        return /^\s*tc[\s_-]*id\s*$/i.test(h || "");
+      }
+
+      function splitStepLine(line) {
+        // Backward-compat: parse legacy "1. step → Expected: x" lines so existing
+        // saved tables migrate cleanly into the new paired-column layout.
+        const stripped = (line || "").trim().replace(/^\s*\d+[.)]\s*/, "");
+        const m = stripped.match(/^(.*?)\s*(?:→|->)\s*Expected\s*:\s*(.+)$/i);
+        if (m) return { step: m[1].trim(), expected: m[2].trim() };
+        return { step: stripped, expected: "" };
+      }
+
+      function isExpectedHeader(h) {
+        return /expected/i.test(h || "");
+      }
+
+      function splitNumberedCell(content) {
+        // Split a cell on <br>, strip any leading "1." / "1)" prefix, drop empties.
+        return (content || "")
+          .split(/<br\s*\/?>/i)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => s.replace(/^\s*\d+[.)]\s*/, ""));
+      }
+
+      function pairStepsAndExpecteds(stepsCell, expectedCell) {
+        // Returns { steps: string[], expecteds: string[] } of equal length.
+        const lines = (stepsCell || "")
+          .split(/<br\s*\/?>/i)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const parsed = lines.map(splitStepLine);
+        const steps = parsed.map((p) => p.step);
+        const inlineExpecteds = parsed.map((p) => p.expected);
+        const inlineHasContent = inlineExpecteds.some((x) => x);
+        const cellExpecteds = splitNumberedCell(expectedCell);
+        const expecteds = inlineHasContent ? inlineExpecteds : cellExpecteds;
+        const n = Math.max(steps.length, expecteds.length, 1);
+        while (steps.length < n) steps.push("");
+        while (expecteds.length < n) expecteds.push("");
+        return { steps, expecteds };
+      }
+
+      function renderEditableTable(parsed) {
+        if (!parsed) return `<pre class="raw">${escapeHtml(lastMarkdown)}</pre>`;
+        const { headers, rows } = parsed;
+        const stepsIdx = headers.findIndex(isStepsHeader);
+        const expectedIdx = headers.findIndex(isExpectedHeader);
+        const ths =
+          `<th class="row-actions-head" aria-hidden="true"></th>` +
+          headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+        const trs = rows
+          .map((r, ri) => {
+            const stepsCellRaw = stepsIdx >= 0 ? r[stepsIdx] : "";
+            const expectedCellRaw = expectedIdx >= 0 ? r[expectedIdx] : "";
+            const { steps, expecteds } = pairStepsAndExpecteds(
+              stepsCellRaw,
+              expectedCellRaw
+            );
+            const cells = r
+              .map((c, ci) => {
+                if (ci === stepsIdx) {
+                  const items = steps
+                    .map(
+                      (step, si) => `
+                  <div class="step-item" data-pair-idx="${si}">
+                    <span class="step-num">${si + 1}.</span>
+                    <span class="step-text" contenteditable="true">${escapeHtml(step)}</span>
+                  </div>`
+                    )
+                    .join("");
+                  return `<td class="steps-cell" data-col="${ci}">${items}<button class="step-add">+ Add step</button></td>`;
+                }
+                if (ci === expectedIdx) {
+                  const items = expecteds
+                    .map(
+                      (exp, si) => `
+                  <div class="expected-item" data-pair-idx="${si}">
+                    <span class="step-num">${si + 1}.</span>
+                    <span class="expected-text" contenteditable="true" data-placeholder="(expected for step ${si + 1})">${escapeHtml(exp)}</span>
+                    <button class="step-del" title="Delete step ${si + 1} & its expected result" aria-label="Delete step ${si + 1} and its expected result">×</button>
+                  </div>`
+                    )
+                    .join("");
+                  return `<td class="expected-cell" data-col="${ci}">${items}</td>`;
+                }
+                return `<td contenteditable="true" data-col="${ci}">${cellToHtml(c)}</td>`;
+              })
+              .join("");
+            return `<tr data-row="${ri}"><td class="row-actions"><button class="row-del" title="Delete this test case" aria-label="Delete row">🗑</button></td>${cells}</tr>`;
+          })
+          .join("");
+        return `<div class="tc-scroll"><table class="tc-table edit-mode"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+      }
+
+      function domCellToMd(td) {
+        const html = td.innerHTML;
+        const tmp = document.createElement("div");
+        tmp.innerHTML = html.replace(/<br\s*\/?>(\s*)/gi, "\u0001");
+        const text = (tmp.textContent || "").replace(/\|/g, "/");
+        return text.split("\u0001").map((s) => s.trim()).join("<br>");
+      }
+
+      function renumberItemsInCell(cell, selector) {
+        cell.querySelectorAll(selector).forEach((it, i) => {
+          const num = it.querySelector(".step-num");
+          if (num) num.textContent = `${i + 1}.`;
+          it.dataset.pairIdx = String(i);
+          // Refresh placeholder for expected items so it stays accurate.
+          const expSpan = it.querySelector(".expected-text");
+          if (expSpan) expSpan.dataset.placeholder = `(expected for step ${i + 1})`;
+        });
+      }
+
+      function renumberStepsInCell(cell) {
+        renumberItemsInCell(cell, ".step-item");
+      }
+
+      function renumberExpectedsInCell(cell) {
+        renumberItemsInCell(cell, ".expected-item");
+      }
+
+      function serializeEditedTable() {
+        const tbl = resultPane.querySelector("table.tc-table.edit-mode");
+        if (!tbl) return;
+        const headerCells = [...tbl.querySelectorAll("thead th")].filter(
+          (th) => !th.classList.contains("row-actions-head")
+        );
+        const headers = headerCells.map((th) => th.textContent.trim());
+        const tcNameIdx = headers.findIndex(isTCNameHeader);
+        const rowsOut = [...tbl.querySelectorAll("tbody tr")].map((tr, idx) => {
+          const dataCells = [...tr.querySelectorAll(":scope > td")].filter(
+            (td) => !td.classList.contains("row-actions")
+          );
+          const out = dataCells.map((td, ci) => {
+            if (td.classList.contains("steps-cell")) {
+              const items = [...td.querySelectorAll(".step-item")].map((it) =>
+                (it.querySelector(".step-text")?.textContent || "")
+                  .trim()
+                  .replace(/\|/g, "/")
+              );
+              // Trim trailing empty steps; keep mid-list empties so pairing aligns.
+              while (items.length && !items[items.length - 1]) items.pop();
+              if (!items.length) return "";
+              return items.map((s, i) => `${i + 1}. ${s}`).join("<br>");
+            }
+            if (td.classList.contains("expected-cell")) {
+              const items = [...td.querySelectorAll(".expected-item")].map((it) =>
+                (it.querySelector(".expected-text")?.textContent || "")
+                  .trim()
+                  .replace(/\|/g, "/")
+              );
+              while (items.length && !items[items.length - 1]) items.pop();
+              if (!items.length) return "";
+              return items.map((s, i) => `${i + 1}. ${s}`).join("<br>");
+            }
+            if (ci === tcNameIdx) {
+              return `TC${String(idx + 1).padStart(2, "0")}`;
+            }
+            return domCellToMd(td);
+          });
+          return `| ${out.join(" | ")} |`;
+        });
+        const headerLine = `| ${headers.join(" | ")} |`;
+        const sepLine = `| ${headers.map(() => "---").join(" | ")} |`;
+        const md = [headerLine, sepLine, ...rowsOut].join("\n");
+        lastMarkdown = md;
+        localStorage.setItem(LS.lastMd, md);
+      }
+
+      function refreshTCNamesInDom() {
+        const tbl = resultPane.querySelector("table.tc-table.edit-mode");
+        if (!tbl) return;
+        const headerCells = [...tbl.querySelectorAll("thead th")].filter(
+          (th) => !th.classList.contains("row-actions-head")
+        );
+        const headers = headerCells.map((th) => th.textContent.trim());
+        // Prefer the new "TC ID" column; fall back to TestcaseName for legacy
+        // 5-column tables loaded from localStorage before the split.
+        const tcIdIdx = headers.findIndex(isTCIDHeader);
+        const tcNameIdx = headers.findIndex(isTCNameHeader);
+        const targetIdx = tcIdIdx >= 0 ? tcIdIdx : tcNameIdx;
+        if (targetIdx < 0) return;
+        [...tbl.querySelectorAll("tbody tr")].forEach((tr, idx) => {
+          const dataCells = [...tr.querySelectorAll(":scope > td")].filter(
+            (td) => !td.classList.contains("row-actions")
+          );
+          const targetCell = dataCells[targetIdx];
+          if (targetCell) targetCell.textContent = `TC${String(idx + 1).padStart(2, "0")}`;
+        });
+      }
+
+      function attachEditHandlers() {
+        const tbl = resultPane.querySelector("table.tc-table.edit-mode");
+        if (!tbl) return;
+
+        // Cell edits → debounced serialize.
+        let t;
+        tbl.addEventListener("input", () => {
+          clearTimeout(t);
+          t = setTimeout(serializeEditedTable, 250);
+        });
+
+        tbl.addEventListener("click", (e) => {
+          // Whole-row delete.
+          const rowDel = e.target.closest(".row-del");
+          if (rowDel) {
+            const tr = rowDel.closest("tr");
+            if (!tr) return;
+            if (!confirm("Delete this test case?")) return;
+            tr.remove();
+            refreshTCNamesInDom();
+            serializeEditedTable();
+            return;
+          }
+
+          // Step OR expected delete — keep the paired column in sync.
+          const stepDel = e.target.closest(".step-del");
+          if (stepDel) {
+            const item = stepDel.closest(".step-item, .expected-item");
+            const tr = stepDel.closest("tr");
+            if (!item || !tr) return;
+            const idx = parseInt(item.dataset.pairIdx || "0", 10);
+            const isStepSide = item.classList.contains("step-item");
+            item.remove();
+            const otherCell = tr.querySelector(
+              isStepSide ? ".expected-cell" : ".steps-cell"
+            );
+            if (otherCell) {
+              const otherSel = isStepSide ? ".expected-item" : ".step-item";
+              const others = [...otherCell.querySelectorAll(otherSel)];
+              const match = others[idx];
+              if (match) match.remove();
+            }
+            const stepsCell = tr.querySelector(".steps-cell");
+            const expectedCell = tr.querySelector(".expected-cell");
+            if (stepsCell) renumberStepsInCell(stepsCell);
+            if (expectedCell) renumberExpectedsInCell(expectedCell);
+            serializeEditedTable();
+            return;
+          }
+
+          // Add a step + matching empty expected.
+          const stepAdd = e.target.closest(".step-add");
+          if (stepAdd) {
+            const tr = stepAdd.closest("tr");
+            const stepsCell = stepAdd.closest(".steps-cell");
+            if (!stepsCell || !tr) return;
+            const expectedCell = tr.querySelector(".expected-cell");
+            const newIdx = stepsCell.querySelectorAll(".step-item").length;
+
+            const stepItem = document.createElement("div");
+            stepItem.className = "step-item";
+            stepItem.dataset.pairIdx = String(newIdx);
+            stepItem.innerHTML = `
+              <span class="step-num">${newIdx + 1}.</span>
+              <span class="step-text" contenteditable="true"></span>`;
+            stepsCell.insertBefore(stepItem, stepAdd);
+
+            if (expectedCell) {
+              const expItem = document.createElement("div");
+              expItem.className = "expected-item";
+              expItem.dataset.pairIdx = String(newIdx);
+              expItem.innerHTML = `
+                <span class="step-num">${newIdx + 1}.</span>
+                <span class="expected-text" contenteditable="true" data-placeholder="(expected for step ${newIdx + 1})"></span>
+                <button class="step-del" title="Delete step ${newIdx + 1} & its expected result" aria-label="Delete step ${newIdx + 1} and its expected result">×</button>`;
+              expectedCell.appendChild(expItem);
+            }
+
+            stepItem.querySelector(".step-text").focus();
+            serializeEditedTable();
+            return;
+          }
+        });
+      }
+
+
+
+      function renderResult() {
+        if (!lastMarkdown) {
+          resultPane.innerHTML = `
+            <div class="empty">
+              <div>
+                <div class="big">🧪</div>
+                Fill in Persona, User Story, and Acceptance Criteria,<br/>
+                then click <strong>Generate Test Cases</strong>.
+              </div>
+            </div>`;
+          return;
+        }
+        if (currentView === "markdown") {
+          resultPane.innerHTML = `<pre class="raw">${escapeHtml(lastMarkdown)}</pre>`;
+        } else {
+          const parsed = parseMarkdownTable(lastMarkdown);
+          if (editMode) {
+            resultPane.innerHTML = renderEditableTable(parsed);
+            attachEditHandlers();
+          } else {
+            resultPane.innerHTML = renderTableHtml(parsed);
+          }
+        }
+      }
+
+      function updateActionButtons() {
+        const enabled = !!lastMarkdown;
+        copyBtn.disabled = !enabled;
+        downloadCsvBtn.disabled = !enabled;
+        downloadXlsxBtn.disabled = !enabled || typeof window.XLSX === "undefined";
+        if (typeof downloadBtn !== "undefined" && downloadBtn) downloadBtn.disabled = !enabled;
+        if (!enabled) setDownloadMenuOpen && setDownloadMenuOpen(false);
+        editModeBtn.disabled = false;
+        if (!enabled && editMode && typeof setEditModeUI === "function") {
+          setEditModeUI(false);
+        }
+      }
+
+      // Snapshot of lastMarkdown taken when edit mode is entered — used by Revert.
+      let editOriginalMd = "";
+      // ----- Save-success toast -----
+      const saveToast = $("saveToast");
+      const saveToastText = $("saveToastText");
+      let _saveToastTimer = null;
+      function flashSaveToast(message) {
+        if (!saveToast) return;
+        if (message) saveToastText.textContent = message;
+        saveToast.classList.add("show");
+        saveToast.setAttribute("aria-hidden", "false");
+        if (_saveToastTimer) clearTimeout(_saveToastTimer);
+        _saveToastTimer = setTimeout(() => {
+          saveToast.classList.remove("show");
+          saveToast.setAttribute("aria-hidden", "true");
+        }, 1800);
+      }
+
+      const revertBtn = $("revertBtn");
+      const saveBtn = $("saveBtn");
+
+      function setEditModeUI(active) {
+        editMode = active;
+        editModeBtn.classList.toggle("active", active);
+        // Pencil hides while editing; Revert + Save take its slot.
+        editModeBtn.style.display = active ? "none" : "";
+        revertBtn.style.display = active ? "" : "none";
+        saveBtn.style.display = active ? "" : "none";
+        if (active) {
+          currentView = "table";
+          [...document.querySelectorAll(".tab")].forEach((t) =>
+            t.classList.toggle("active", t.dataset.view === "table")
+          );
+        }
+      }
+
+      editModeBtn.addEventListener("click", () => {
+        if (!lastMarkdown) {
+          setStatus(
+            "Generate test cases first — then Edit Mode lets you tweak cells, delete steps, or remove whole test cases.",
+            "error"
+          );
+          return;
+        }
+        editOriginalMd = lastMarkdown;
+        setEditModeUI(true);
+        setStatus(
+          "Edit Mode on — click any cell to edit. Use × on an Expected Result to delete the paired step. Click ✓ Save to keep edits, ↺ Revert to undo.",
+          "success"
+        );
+        renderResult();
+      });
+
+      saveBtn.addEventListener("click", () => {
+        // Flush any pending 250ms input-debounce so the last keystroke is
+        // captured before we tear down the editable DOM.
+        serializeEditedTable();
+        const hadChanges = lastMarkdown !== editOriginalMd;
+        setEditModeUI(false);
+        setStatus(
+          hadChanges
+            ? "Edits saved. Copy / Download buttons now reflect your changes."
+            : "Exited edit mode (no changes made).",
+          "success"
+        );
+        renderResult();
+        flashSaveToast(hadChanges ? "Test case edits saved" : "Edit mode exited");
+      });
+
+      revertBtn.addEventListener("click", () => {
+        const hadChanges = lastMarkdown !== editOriginalMd;
+        lastMarkdown = editOriginalMd;
+        localStorage.setItem(LS.lastMd, lastMarkdown);
+        setEditModeUI(false);
+        setStatus(
+          hadChanges
+            ? "Reverted to the state at edit-mode entry. All edits discarded."
+            : "Edit mode exited (no changes to revert).",
+          hadChanges ? "" : "success"
+        );
+        renderResult();
+        updateActionButtons();
+      });
+
+      // ----------------------------------------------------------------------
+      // Generate
+      // ----------------------------------------------------------------------
+      function readyOrError() {
+        const apiKey = apiKeyEl.value.trim();
+        const cfg = currentProvider();
+        if (!apiKey) {
+          settingsDetails.open = true;
+          settingsBody.style.display = "block";
+          apiKeyEl.focus();
+          return `Please add your ${cfg.label} API key in Settings.`;
+        }
+        const model = effectiveModel();
+        if (!model) return "Please pick a model (or type a custom model ID).";
+        return { apiKey, model, cfg };
+      }
+
+      let activeGenAbortCtl = null;
+      const stopBtn = $("stopBtn");
+      // Toggle the Stop button only. Generate stays visible during a run
+      // (disabled, with the spinner/label) so the user sees both the
+      // "in-flight" indicator AND a cancel option side-by-side.
+      function showGenerating(isGen) {
+        if (stopBtn) stopBtn.style.display = isGen ? "inline-flex" : "none";
+      }
+      if (stopBtn) stopBtn.addEventListener("click", () => { if (activeGenAbortCtl) activeGenAbortCtl.abort(); });
+      generateBtn.addEventListener("click", async () => {
+        const persona = personaEl.value.trim();
+        const story = storyEl.value.trim();
+        const ac = acEl.value.trim();
+        const customInstructions = customPromptEl.value.trim();
+        const testType = testTypeEl.value;
+        const domain = domainEl.value;
+
+        if (!persona) return setStatus("Please enter the Persona.", "error");
+        if (!story) return setStatus("Please enter the User Story.", "error");
+        if (!ac) return setStatus("Please enter the Acceptance Criteria.", "error");
+
+        const ready = readyOrError();
+        if (typeof ready === "string") return setStatus(ready, "error");
+        const { apiKey, model, cfg } = ready;
+
+        const temperature = Number(tempEl.value);
+        const prompt = buildPrompt(persona, story, ac, customInstructions, testType, domain, screenshots.length);
+
+        generateBtn.disabled = true;
+        const originalLabel = generateBtn.innerHTML;
+        generateBtn.innerHTML = `<span class="loader"></span>Generating with ${model}...`;
+        const ctxBits = [];
+        if (testType && testType !== "functional") ctxBits.push(testTypeEl.options[testTypeEl.selectedIndex].text);
+        if (domain && domain !== "generic") ctxBits.push(domainEl.options[domainEl.selectedIndex].text);
+        if (customInstructions) ctxBits.push("custom instructions");
+        const ctxStr = ctxBits.length ? ` [${ctxBits.join(" · ")}]` : "";
+        setStatus(`Calling ${cfg.label}${ctxStr}...`);
+        showGenerating(true);
+        activeGenAbortCtl = new AbortController();
+        Timer.start();
+
+        try {
+          const cfgNow = currentProvider();
+          const imagesPayload = modelSupportsVision(cfgNow, model) ? screenshots : [];
+          if (screenshots.length && !modelSupportsVision(cfgNow, model)) {
+            setStatus(
+              `Warning: ${screenshots.length} screenshot${screenshots.length === 1 ? " was" : "s were"} dropped — \`${model}\` doesn't support vision.`,
+              "error"
+            );
+          }
+          const raw = await callProvider({ apiKey, model, temperature, prompt, images: imagesPayload, signal: activeGenAbortCtl?.signal });
+          const md = extractMarkdownTable(raw);
+          lastMarkdown = md;
+          localStorage.setItem(LS.lastMd, md);
+          renderResult();
+          updateActionButtons();
+          const parsed = parseMarkdownTable(md);
+          const n = parsed ? parsed.rows.length : 0;
+          const ms = Timer.stop("done");
+          setStatus(
+            `Generated ${n} test case${n === 1 ? "" : "s"} with ${model} in ${Timer.fmt(ms)}.`,
+            "success"
+          );
+        } catch (err) {
+          const wasAborted =
+            err && (err.name === "AbortError" || /aborted/i.test(err.message || ""));
+          if (wasAborted) {
+            Timer.reset();
+            setStatus("Generation cancelled.", "error");
+          } else {
+            console.error(err);
+            Timer.stop("error");
+            setStatus(err.message || String(err), "error");
+          }
+        } finally {
+          activeGenAbortCtl = null;
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = originalLabel;
+          showGenerating(false);
+        }
+      });
+
+      // ----------------------------------------------------------------------
+      // Test connection
+      // ----------------------------------------------------------------------
+      testBtn.addEventListener("click", async () => {
+        const ready = readyOrError();
+        if (typeof ready === "string") return setTestStatus(ready, "error");
+        const { apiKey, model, cfg } = ready;
+
+        testBtn.disabled = true;
+        const originalLabel = testBtn.innerHTML;
+        testBtn.innerHTML = `<span class="loader"></span>Testing ${model}...`;
+        setTestStatus(`Pinging ${cfg.label}...`);
+
+        const t0 = Date.now();
+        try {
+          const sample = await callProvider({
+            apiKey,
+            model,
+            temperature: 0,
+            prompt: 'Reply with exactly the word "pong" and nothing else.',
+            maxTokens: 32,
+            // Gemini 2.5 Flash "thinks" before answering and thinking
+            // counts against this budget. Give it room; callGemini will
+            // also disable thinking on Flash variants for this ping.
+            maxOutputTokens: 512,
+            disableThinking: true,
+          });
+          const ms = Date.now() - t0;
+          setTestStatus(
+            `✓ ${cfg.label} · ${model} responded in ${ms} ms (sample: "${(sample || "").trim().slice(0, 60)}")`,
+            "success"
+          );
+        } catch (err) {
+          setTestStatus("✗ " + (err.message || String(err)), "error");
+        } finally {
+          testBtn.disabled = false;
+          testBtn.innerHTML = originalLabel;
+        }
+      });
+
+      // ----------------------------------------------------------------------
+      // Copy / download
+      // ----------------------------------------------------------------------
+      // Build a spreadsheet-friendly HTML table (Excel/Sheets/Numbers parse
+      // this perfectly on paste — preserving in-cell <br> as line breaks).
+      function buildClipboardHtml(parsed) {
+        const { headers, rows } = parsed;
+        const cellHtml = (raw) =>
+          (raw || "").split(/<br\s*\/?>(?:\s*)/i).map(escapeHtml).join("<br>");
+        const ths = headers
+          .map(
+            (h) =>
+              `<th style="border:1px solid #999;padding:6px 10px;background:#1f2937;color:#f9fafb;text-align:left;font-weight:600;">${escapeHtml(h)}</th>`
+          )
+          .join("");
+        const trs = rows
+          .map(
+            (r) =>
+              `<tr>${r
+                .map(
+                  (c) =>
+                    `<td style="border:1px solid #999;padding:6px 10px;vertical-align:top;">${cellHtml(c)}</td>`
+                )
+                .join("")}</tr>`
+          )
+          .join("");
+        return `<meta charset="utf-8"><table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:11pt;">
+<thead><tr>${ths}</tr></thead>
+<tbody>${trs}</tbody>
+</table>`;
+      }
+
+      // Build a TSV plain-text fallback for editors that don't accept HTML
+      // (Notepad, plain textareas, etc.). Excel also parses TSV directly.
+      // Embedded newlines (from <br>) are flattened to " | " so each cell
+      // stays on one TSV line.
+      function buildClipboardTsv(parsed) {
+        const { headers, rows } = parsed;
+        const sanitize = (s) =>
+          (s || "")
+            .replace(/<br\s*\/?>(?:\s*)/gi, " | ")
+            .replace(/<[^>]+>/g, "")
+            .replace(/\t/g, " ")
+            .replace(/\r?\n/g, " ")
+            .trim();
+        const lines = [headers.map(sanitize).join("\t")];
+        for (const r of rows) lines.push(r.map(sanitize).join("\t"));
+        return lines.join("\n");
+      }
+
+      copyBtn.addEventListener("click", async () => {
+        const parsed = parseMarkdownTable(lastMarkdown);
+        if (!parsed) {
+          // Markdown unparseable — fall back to copying raw markdown text.
+          try {
+            await navigator.clipboard.writeText(lastMarkdown);
+            setStatus("Copied raw Markdown (table could not be parsed).", "success");
+          } catch (e) {
+            setStatus("Failed to copy: " + e.message, "error");
+          }
+          return;
+        }
+        const htmlStr = buildClipboardHtml(parsed);
+        const tsvStr = buildClipboardTsv(parsed);
+
+        // Prefer multi-format clipboard (HTML + TSV). When pasted into Excel,
+        // Sheets, Numbers, Slack, or email, Excel/Sheets pick HTML; Notepad
+        // picks plain text. Falls back to TSV-only on older browsers.
+        try {
+          if (typeof ClipboardItem === "function" && navigator.clipboard?.write) {
+            const item = new ClipboardItem({
+              "text/html": new Blob([htmlStr], { type: "text/html" }),
+              "text/plain": new Blob([tsvStr], { type: "text/plain" }),
+            });
+            await navigator.clipboard.write([item]);
+            setStatus(
+              "Copied as spreadsheet table. Paste into Excel, Google Sheets, or Numbers for a formatted table (Notepad/plain editors get TSV).",
+              "success"
+            );
+          } else {
+            await navigator.clipboard.writeText(tsvStr);
+            setStatus(
+              "Copied as TSV. Paste directly into Excel or Google Sheets (one row per line, columns tab-separated).",
+              "success"
+            );
+          }
+        } catch (e) {
+          // Last-resort fallback: try plain-text TSV write.
+          try {
+            await navigator.clipboard.writeText(tsvStr);
+            setStatus("Copied as TSV (rich-format clipboard unavailable).", "success");
+          } catch (e2) {
+            setStatus("Failed to copy: " + (e.message || e2.message), "error");
+          }
+        }
+      });
+
+      function download(filename, content, mime) {
+        const blob = new Blob([content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      
+      // ----------------------------------------------------------------------
+      // Download dropdown menu (icon button -> CSV / Excel choices)
+      // ----------------------------------------------------------------------
+      const downloadBtn = $("downloadBtn");
+      const downloadMenu = document.querySelector(".download-menu");
+
+      function setDownloadMenuOpen(open) {
+        if (!downloadMenu) return;
+        downloadMenu.setAttribute("data-open", open ? "true" : "false");
+        if (downloadBtn) downloadBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+
+      if (downloadBtn && downloadMenu) {
+        downloadBtn.addEventListener("click", (e) => {
+          if (downloadBtn.disabled) return;
+          e.stopPropagation();
+          const isOpen = downloadMenu.getAttribute("data-open") === "true";
+          setDownloadMenuOpen(!isOpen);
+        });
+        document.addEventListener("click", (e) => {
+          if (!downloadMenu.contains(e.target)) setDownloadMenuOpen(false);
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") setDownloadMenuOpen(false);
+        });
+        // Close menu after the user picks a format (existing CSV/XLSX click
+        // handlers continue to fire normally because we don't preventDefault).
+        downloadCsvBtn.addEventListener("click", () => setDownloadMenuOpen(false));
+        downloadXlsxBtn.addEventListener("click", () => setDownloadMenuOpen(false));
+      }
+
+      downloadCsvBtn.addEventListener("click", () => {
+        const parsed = parseMarkdownTable(lastMarkdown);
+        if (!parsed) return setStatus("No table to export.", "error");
+        const escapeCsv = (s) => {
+          const cleaned = s.replace(/<br\s*\/?>(?:\s*)/gi, "\n");
+          if (/[",\n]/.test(cleaned)) return `"${cleaned.replace(/"/g, '""')}"`;
+          return cleaned;
+        };
+        const lines = [
+          parsed.headers.map(escapeCsv).join(","),
+          ...parsed.rows.map((r) => r.map(escapeCsv).join(",")),
+        ];
+        download("test-cases.csv", lines.join("\n"), "text/csv");
+        setStatus(
+          'Saved "test-cases.csv" to your Downloads folder.',
+          "success"
+        );
+      });
+
+      downloadXlsxBtn.addEventListener("click", () => {
+        if (typeof window.XLSX === "undefined") {
+          return setStatus(
+            "XLSX library failed to load (likely an offline / blocked CDN). Use Download .csv instead.",
+            "error"
+          );
+        }
+        const parsed = parseMarkdownTable(lastMarkdown);
+        if (!parsed) return setStatus("No table to export.", "error");
+
+        // Convert <br> in cells to real newlines so Excel wraps properly.
+        const cleanRows = parsed.rows.map((r) =>
+          r.map((c) => c.replace(/<br\s*\/?>(?:\s*)/gi, "\n"))
+        );
+        const aoa = [parsed.headers, ...cleanRows];
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+        // Column widths tuned for the standard 5-column test-case table.
+        const baseWidths = {
+          testcasename: 12,
+          objective: 38,
+          "pre-conditions": 36,
+          steps: 52,
+          "expected result": 52,
+        };
+        ws["!cols"] = parsed.headers.map((h) => ({
+          wch: baseWidths[h.trim().toLowerCase()] || 30,
+        }));
+
+        // Best-effort wrap-text + top-align (community SheetJS may strip
+        // styles on write, but doesn't hurt to try).
+        const range = XLSX.utils.decode_range(ws["!ref"]);
+        for (let R = range.s.r; R <= range.e.r; R++) {
+          for (let C = range.s.c; C <= range.e.c; C++) {
+            const addr = XLSX.utils.encode_cell({ r: R, c: C });
+            if (ws[addr]) {
+              ws[addr].s = {
+                alignment: { wrapText: true, vertical: "top" },
+                font: R === 0 ? { bold: true } : undefined,
+              };
+            }
+          }
+        }
+
+        // Freeze the header row so it stays visible while scrolling.
+        ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Test Cases");
+        XLSX.writeFile(wb, "test-cases.xlsx");
+        setStatus(
+          'Saved "test-cases.xlsx" to your Downloads folder. Opens in Excel, Google Sheets, Numbers, or LibreOffice.',
+          "success"
+        );
+      });
+
+
+      // ----------------------------------------------------------------------
+      // Reference Screenshots — upload / paste / drag-drop / state
+      // ----------------------------------------------------------------------
+      const screenshotDrop = $("screenshotDrop");
+      const screenshotInput = $("screenshotInput");
+      const screenshotPreviews = $("screenshotPreviews");
+      const screenshotWarn = $("screenshotWarn");
+
+      // In-memory only — images don't persist across reload (by design;
+      // they'd blow past localStorage quota).
+      const screenshots = [];
+      const SS_MAX_IMAGES = 5;
+      const SS_MAX_DIM = 1568;
+      const SS_MAX_BYTES = 5 * 1024 * 1024;
+
+      function modelSupportsVision(cfg, model) {
+        if (!cfg || !model) return false;
+        if (cfg.visionModels === "*") return true;
+        if (!Array.isArray(cfg.visionModels)) return false;
+        return cfg.visionModels.includes(model);
+      }
+
+      function compressImage(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              let { width, height } = img;
+              if (width > SS_MAX_DIM || height > SS_MAX_DIM) {
+                const r = Math.min(SS_MAX_DIM / width, SS_MAX_DIM / height);
+                width = Math.round(width * r);
+                height = Math.round(height * r);
+              }
+              const canvas = document.createElement("canvas");
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              // Fill black bg for JPEG (drops alpha) — matches typical screenshot UX
+              ctx.fillStyle = "#0a0e1d";
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              const mime = "image/jpeg";
+              const dataUrl = canvas.toDataURL(mime, 0.85);
+              const base64 = dataUrl.split(",")[1] || "";
+              resolve({
+                name: file.name || "pasted-image.jpg",
+                mimeType: mime,
+                base64,
+                dataUrl,
+                sizeKb: Math.round((base64.length * 0.75) / 1024),
+              });
+            };
+            img.onerror = () => reject(new Error("Failed to decode image"));
+            img.src = e.target.result;
+          };
+          reader.onerror = () => reject(new Error("Failed to read file"));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function addImageFiles(files) {
+        const errs = [];
+        for (const f of files) {
+          if (!f.type || !f.type.startsWith("image/")) {
+            errs.push(`Skipped ${f.name || "file"}: not an image`);
+            continue;
+          }
+          if (f.size > SS_MAX_BYTES) {
+            errs.push(`Skipped ${f.name}: > ${SS_MAX_BYTES / 1024 / 1024} MB raw`);
+            continue;
+          }
+          if (screenshots.length >= SS_MAX_IMAGES) {
+            errs.push(`Skipped ${f.name}: max ${SS_MAX_IMAGES} screenshots reached`);
+            continue;
+          }
+          try {
+            const img = await compressImage(f);
+            screenshots.push(img);
+          } catch (e) {
+            errs.push(`Failed to process ${f.name}: ${e.message}`);
+          }
+        }
+        renderScreenshotPreviews();
+        if (errs.length) setStatus(errs.join(" · "), "error");
+        return errs;
+      }
+
+      function renderScreenshotPreviews() {
+        if (!screenshots.length) {
+          screenshotPreviews.innerHTML = "";
+          updateScreenshotGating();
+          return;
+        }
+        screenshotPreviews.innerHTML = screenshots
+          .map(
+            (s, i) => `
+              <div class="screenshot-preview" data-idx="${i}">
+                <img src="${s.dataUrl}" alt="${escapeHtml(s.name)}">
+                <span class="shot-meta">${escapeHtml(s.name)} · ${s.sizeKb} KB</span>
+                <button class="shot-del" title="Remove" aria-label="Remove image" data-idx="${i}">×</button>
+              </div>`
+          )
+          .join("");
+        updateScreenshotGating();
+      }
+
+      screenshotPreviews.addEventListener("click", (e) => {
+        const btn = e.target.closest(".shot-del");
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.idx, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < screenshots.length) {
+          screenshots.splice(idx, 1);
+          renderScreenshotPreviews();
+        }
+      });
+
+      screenshotDrop.addEventListener("click", () => {
+        if (screenshotDrop.classList.contains("disabled")) return;
+        screenshotInput.click();
+      });
+      screenshotInput.addEventListener("change", async (e) => {
+        await addImageFiles([...e.target.files]);
+        screenshotInput.value = "";
+      });
+
+      screenshotDrop.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        screenshotDrop.classList.add("drag-active");
+      });
+      screenshotDrop.addEventListener("dragleave", () => {
+        screenshotDrop.classList.remove("drag-active");
+      });
+      screenshotDrop.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        screenshotDrop.classList.remove("drag-active");
+        const files = [...(e.dataTransfer?.files || [])];
+        if (files.length) await addImageFiles(files);
+      });
+
+      // Global paste — capture clipboard images from anywhere on the page,
+      // but skip when focus is inside a contenteditable / textarea where the
+      // user is genuinely typing rich text. (Plain-text paste is unaffected.)
+      document.addEventListener("paste", async (e) => {
+        const items = [...(e.clipboardData?.items || [])];
+        const files = items
+          .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
+          .map((it) => it.getAsFile())
+          .filter(Boolean);
+        if (!files.length) return;
+        e.preventDefault();
+        await addImageFiles(files);
+        setStatus(
+          `Pasted ${files.length} screenshot${files.length === 1 ? "" : "s"} from clipboard.`,
+          "success"
+        );
+      });
+
+      function updateScreenshotGating() {
+        const cfg = currentProvider();
+        const model = effectiveModel();
+        const ok = modelSupportsVision(cfg, model);
+        screenshotDrop.classList.toggle("disabled", !ok);
+        if (!ok) {
+          screenshotWarn.style.display = "block";
+          screenshotWarn.innerHTML = screenshots.length
+            ? `<strong>Current model (${escapeHtml(model || "—")}) has no vision support — your ${screenshots.length} screenshot${screenshots.length === 1 ? "" : "s"} will be IGNORED.</strong> Switch to a vision-capable model (Claude Opus / Sonnet, gpt-4o, gemini-2.5-pro, meta-llama/llama-4-scout) in Settings.`
+            : `<strong>Current model has no vision support.</strong> Pick a vision-capable model (Claude Opus / Sonnet, gpt-4o, gemini-2.5-pro, meta-llama/llama-4-scout) to enable screenshot uploads.`;
+        } else {
+          screenshotWarn.style.display = "none";
+        }
+      }
+
+      // Re-evaluate when provider / model changes.
+      providerEl.addEventListener("change", () => setTimeout(updateScreenshotGating, 0));
+      modelEl.addEventListener("change", updateScreenshotGating);
+      // Initial gating evaluation runs once PROVIDERS are wired.
+      setTimeout(updateScreenshotGating, 0);
+
+      // ----------------------------------------------------------------------
+      // Initial render
+      // ----------------------------------------------------------------------
+      renderResult();
+      updateActionButtons();
+    </script>
+    <div id="saveToast" class="save-toast" role="status" aria-live="polite" aria-hidden="true">
+      <svg class="check-circle" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" fill="#10b981"/>
+        <path d="M7.5 12.5l3 3 6-7" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span id="saveToastText">Edits saved</span>
+    </div>
+    <div id="authBackdrop" class="auth-modal-backdrop" hidden>
+      <form id="authForm" class="auth-modal" novalidate>
+        <h3>🔒 Sign in to continue</h3>
+        <p class="sub">Enter the team credentials to access the AC → Test Cases tool.</p>
+        <label for="authUser">Username</label>
+        <input id="authUser" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required />
+        <label for="authPass">Password</label>
+        <input id="authPass" type="password" autocomplete="current-password" required />
+        <div class="auth-actions"><button type="submit" class="primary">Sign in</button></div>
+        <div id="authError" class="auth-error" role="alert" aria-live="polite"></div>
+      </form>
+    </div>
+  </body>
+</html>
