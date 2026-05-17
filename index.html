@@ -508,6 +508,95 @@
       }
       .footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: 12px; }
       #customModelWrap { display: none; margin-top: 8px; }
+
+      /* Refine modal */
+      .refine-modal-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(2, 6, 23, 0.78);
+        backdrop-filter: blur(6px);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 9000;
+        padding: 24px;
+        animation: refineFadeIn 0.18s ease-out;
+      }
+      .refine-modal-backdrop[hidden] { display: none; }
+      @keyframes refineFadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      .refine-modal {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--border); border-radius: 16px;
+        max-width: 620px; width: 100%;
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+        padding: 18px 18px 16px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+        animation: refineRise 0.22s cubic-bezier(.2,.7,.2,1);
+      }
+      @keyframes refineRise {
+        from { transform: translateY(10px) scale(0.98); opacity: 0; }
+        to   { transform: translateY(0)     scale(1);    opacity: 1; }
+      }
+      .refine-modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 10px; margin-bottom: 8px;
+      }
+      .refine-modal-header h3 {
+        margin: 0; font-size: 15px; font-weight: 600; color: var(--text);
+        display: flex; align-items: center; gap: 8px;
+      }
+      .refine-modal-close {
+        background: transparent; border: 1px solid var(--border);
+        color: var(--muted); width: 28px; height: 28px;
+        border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .refine-modal-close:hover { color: var(--text); border-color: var(--accent); }
+      .refine-modal .sub {
+        color: var(--muted); font-size: 12px; margin: 0 0 12px;
+      }
+      .refine-modal textarea {
+        width: 100%; min-height: 90px;
+        background: #0d1330; border: 1px solid var(--border);
+        color: var(--text); border-radius: 10px; padding: 10px 12px;
+        font-size: 13px; line-height: 1.5; resize: vertical;
+        box-sizing: border-box;
+      }
+      .refine-modal textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+      .refine-modal .chips {
+        display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+      }
+      .refine-modal .actions {
+        display: flex; gap: 8px; margin-top: 14px;
+      }
+      .chip {
+        font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
+        border: 1px solid var(--border); color: var(--muted);
+        background: rgba(255,255,255,0.02); cursor: pointer;
+        user-select: none;
+      }
+      .chip:hover { color: var(--text); border-color: var(--accent); }
+      #refineOpenBtn { position: relative; }
+      #refineOpenBtn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+      /* Generation progress (fills the bottom of any .btn-progress button) */
+      .btn-progress { position: relative; overflow: hidden; }
+      .btn-progress::after {
+        content: "";
+        position: absolute; left: 0; bottom: 0;
+        height: 3px;
+        width: var(--pct, 0%);
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        transition: width 0.18s ease-out;
+        border-radius: 0 2px 2px 0;
+        pointer-events: none;
+      }
+      .pct-badge {
+        display: inline-block; margin-left: 6px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 600; opacity: 0.95;
+      }
     </style>
   </head>
   <body>
@@ -674,6 +763,12 @@
                   <path d="M5 12l5 5 9-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
+              <button id="refineOpenBtn" class="icon-btn" disabled title="Refine — open the prompt editor to ask the AI to revise the table" aria-label="Refine test cases">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M3 12a9 9 0 0 1 15.4-6.36L21 8M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12a9 9 0 0 1-15.4 6.36L3 16M3 21v-5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
               <button id="copyBtn" class="icon-btn" disabled title="Copy entire test script (Markdown) to clipboard" aria-label="Copy test script">
                 <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
                   <rect x="8" y="3" width="13" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -710,12 +805,41 @@
               </div>
             </div>
           </div>
+
         </section>
       </div>
 
       <div class="footer">
         Runs entirely in your browser. Your API key and inputs never leave your machine except for the
         direct call to the selected provider's API.
+      </div>
+    </div>
+
+    <!-- Refine modal (placed before <script> so top-level $() lookups succeed) -->
+    <div id="refineBackdrop" class="refine-modal-backdrop" hidden>
+      <div class="refine-modal" role="dialog" aria-modal="true" aria-labelledby="refineModalTitle">
+        <div class="refine-modal-header">
+          <h3 id="refineModalTitle">🔁 Refine these test cases</h3>
+          <button type="button" id="refineCloseBtn" class="refine-modal-close" aria-label="Close refine dialog" title="Close (Esc)">✕</button>
+        </div>
+        <p class="sub">Describe what should change. The AI will regenerate the full table with your feedback applied, preserving the column contract and re-numbering TC01..TCNN.</p>
+        <textarea
+          id="refineFeedback"
+          placeholder="e.g. Add boundary tests for the $50 minimum-order threshold; merge TC03 and TC04; convert TC06's steps to mobile-Safari specifics."
+        ></textarea>
+        <div class="chips" id="refineChips">
+          <span class="chip" data-suggest="Add more negative and edge case scenarios.">+ negative / edge</span>
+          <span class="chip" data-suggest="Add boundary value tests around all numeric thresholds.">+ boundaries</span>
+          <span class="chip" data-suggest="Add accessibility (a11y) checks for keyboard, screen reader, and color contrast.">+ a11y</span>
+          <span class="chip" data-suggest="Add mobile-specific test cases for iOS Safari and Android Chrome.">+ mobile</span>
+          <span class="chip" data-suggest="Make Steps more granular (assume tester is non-technical).">+ granular steps</span>
+          <span class="chip" data-suggest="Add API/backend validation test cases distinct from UI cases.">+ API layer</span>
+        </div>
+        <div class="actions">
+          <button id="refineBtn" class="accent2">Apply Refinement</button>
+          <button id="refineCancelBtn" class="ghost">Cancel</button>
+        </div>
+        <div id="refineStatus" class="status"></div>
       </div>
     </div>
 
@@ -872,6 +996,27 @@
       const customPromptEl = $("customPrompt");
       const testTypeEl = $("testType");
       const domainEl = $("domain");
+      const refineBackdrop = $("refineBackdrop");
+      const refineOpenBtn = $("refineOpenBtn");
+      const refineCloseBtn = $("refineCloseBtn");
+      const refineFeedback = $("refineFeedback");
+      const refineBtn = $("refineBtn");
+      const refineCancelBtn = $("refineCancelBtn");
+      const refineStatus = $("refineStatus");
+      const refineChips = $("refineChips");
+
+      // Open/close helpers for the refine modal.
+      function openRefineModal() {
+        if (!refineBackdrop) return;
+        refineBackdrop.hidden = false;
+        document.body.style.overflow = "hidden";
+        setTimeout(() => { if (refineFeedback) refineFeedback.focus(); }, 30);
+      }
+      function closeRefineModal() {
+        if (!refineBackdrop) return;
+        refineBackdrop.hidden = true;
+        document.body.style.overflow = "";
+      }
       const generateBtn = $("generateBtn");
       const genTimer = $("genTimer");
       const genTimerLabel = $("genTimerLabel");
@@ -926,6 +1071,74 @@
           fmt,
         };
       })();
+
+      // ----------------------------------------------------------------------
+      // Progress — simulated % indicator for non-streaming LLM calls.
+      //
+      // The Anthropic / Gemini / Groq APIs we use return one big response (no
+      // streaming), so a TRUE % is impossible without server-sent events.
+      // Instead we model expected completion as an asymptotic curve toward
+      // 90%, then snap to 100% on success. This is the same UX pattern used
+      // by GitHub Actions, npm install, Vercel builds, etc.
+      //   pct(t) = 90 * (1 - exp(-t / tau))   with tau tuned to ~15s
+      // After 15s we're ~57%, after 30s ~86%, asymptotically approaching 90%.
+      // ----------------------------------------------------------------------
+      const Progress = (() => {
+        const TAU_MS = 15000; // 90% reached around 30-40s; tuned for typical
+                              // Claude / Gemini latencies for ~10-test-case runs.
+        const TICK_MS = 120;
+        const handles = new WeakMap();
+
+        function paint(btn, badgeId, pct) {
+          if (!btn) return;
+          btn.classList.add("btn-progress");
+          btn.style.setProperty("--pct", pct + "%");
+          if (badgeId) {
+            const badge = document.getElementById(badgeId);
+            if (badge) badge.textContent = pct + "%";
+          }
+        }
+        function clearVisual(btn) {
+          if (!btn) return;
+          btn.classList.remove("btn-progress");
+          btn.style.removeProperty("--pct");
+        }
+        return {
+          start(btn, badgeId) {
+            if (!btn) return;
+            const prev = handles.get(btn);
+            if (prev) clearInterval(prev.id);
+            const startedAt = performance.now();
+            paint(btn, badgeId, 0);
+            const id = setInterval(() => {
+              const t = performance.now() - startedAt;
+              const pct = Math.min(90, Math.round(90 * (1 - Math.exp(-t / TAU_MS))));
+              paint(btn, badgeId, pct);
+            }, TICK_MS);
+            handles.set(btn, { id, badgeId, startedAt });
+          },
+          complete(btn) {
+            if (!btn) return;
+            const h = handles.get(btn);
+            if (h) {
+              clearInterval(h.id);
+              paint(btn, h.badgeId, 100);
+              handles.delete(btn);
+            }
+            setTimeout(() => clearVisual(btn), 450);
+          },
+          reset(btn) {
+            if (!btn) return;
+            const h = handles.get(btn);
+            if (h) {
+              clearInterval(h.id);
+              handles.delete(btn);
+            }
+            clearVisual(btn);
+          },
+        };
+      })();
+
       const clearBtn = $("clearBtn");
       const sampleBtn = $("sampleBtn");
       const statusEl = $("status");
@@ -1146,6 +1359,9 @@
         Timer.reset();
         renderResult();
         updateActionButtons();
+        closeRefineModal();
+        if (refineFeedback) refineFeedback.value = "";
+        setRefineStatus("");
       });
 
       function setStatus(msg, kind = "") {
@@ -1155,6 +1371,11 @@
       function setTestStatus(msg, kind = "") {
         testStatus.className = "status " + kind;
         testStatus.textContent = msg;
+      }
+      function setRefineStatus(msg, kind = "") {
+        if (!refineStatus) return;
+        refineStatus.className = "status " + kind;
+        refineStatus.textContent = msg;
       }
 
       // ----------------------------------------------------------------------
@@ -1238,6 +1459,54 @@ Acceptance Criteria:
 ${ac}
 
 Generate the Markdown table now.`;
+      }
+
+      // Refine: reuse the same column contract + steering, but anchor the model
+      // on the PREVIOUS table and the QA lead's free-form feedback so it
+      // regenerates the full table with the change applied.
+      function buildRefinePrompt(persona, story, ac, previousTable, feedback, customInstructions, testType, domain, imageCount) {
+        const typeBlock = TEST_TYPE_GUIDANCE[testType]
+          ? `\n\nTEST TYPE FOCUS:\n${TEST_TYPE_GUIDANCE[testType]}\n`
+          : "";
+        const domainBlk = DOMAIN_GUIDANCE[domain]
+          ? `\n\nDOMAIN CONTEXT:\n${DOMAIN_GUIDANCE[domain]}\n`
+          : "";
+        const extras = (customInstructions || "").trim()
+          ? `\n\nADDITIONAL INSTRUCTIONS FROM THE QA LEAD (apply alongside the column contract):\n${customInstructions.trim()}\n`
+          : "";
+        const ss = Number(imageCount) || 0;
+        const screenshotBlk = ss > 0
+          ? `\n\nATTACHED SCREENSHOTS:\n${ss} reference screenshot${ss === 1 ? "" : "s"} attached. Anchor steps and expected results in exact UI labels visible in the image${ss === 1 ? "" : "s"}.\n`
+          : "";
+        return `You are a Senior QA Automation Engineer. You previously generated this Markdown table of test cases:
+
+${previousTable}
+
+The QA lead has provided this feedback / change request:
+
+${feedback}
+
+Regenerate the FULL Markdown test-case table incorporating the feedback. Keep the SAME column contract and re-number rows TC01..TCNN sequentially.
+
+OUTPUT REQUIREMENTS:
+1. Format: Output ONLY a single GitHub-flavored Markdown table — no prose, no headings, no introductions, no closing remarks. Every row pipe-bordered.
+2. Columns (in this exact order): TC ID | TestcaseName | Objective | Pre-Conditions | Steps | Expected Result
+3. TC ID values must be TC01, TC02, TC03, ... (sequential, zero-padded). TestcaseName is a short descriptive title (3-7 words, action-oriented, no "TC" prefix).
+4. Steps: numbered list with <br> between items ("1. Do X<br>2. Do Y<br>3. Click Z").
+5. Expected Result: SAME numbering, one-to-one with Steps. Count MUST equal Steps count.
+6. Do NOT escape pipe characters inside cells — rephrase or use "or" / commas.
+7. Cover happy-path, negative, boundary, validation, and edge cases.${typeBlock}${domainBlk}${extras}${screenshotBlk}
+
+ORIGINAL INPUT (for reference):
+Persona: ${persona}
+
+User Story:
+${story}
+
+Acceptance Criteria:
+${ac}
+
+Output the updated Markdown table now.`;
       }
 
       // ----------------------------------------------------------------------
@@ -1859,6 +2128,7 @@ Generate the Markdown table now.`;
         downloadXlsxBtn.disabled = !enabled || typeof window.XLSX === "undefined";
         if (typeof downloadBtn !== "undefined" && downloadBtn) downloadBtn.disabled = !enabled;
         if (!enabled) setDownloadMenuOpen && setDownloadMenuOpen(false);
+        if (refineOpenBtn) refineOpenBtn.disabled = !enabled;
         editModeBtn.disabled = false;
         if (!enabled && editMode && typeof setEditModeUI === "function") {
           setEditModeUI(false);
@@ -1996,7 +2266,7 @@ Generate the Markdown table now.`;
 
         generateBtn.disabled = true;
         const originalLabel = generateBtn.innerHTML;
-        generateBtn.innerHTML = `<span class="loader"></span>Generating with ${model}...`;
+        generateBtn.innerHTML = `<span class="loader"></span>Generating ${model}... <span class="pct-badge" id="genPctBadge">0%</span>`;
         const ctxBits = [];
         if (testType && testType !== "functional") ctxBits.push(testTypeEl.options[testTypeEl.selectedIndex].text);
         if (domain && domain !== "generic") ctxBits.push(domainEl.options[domainEl.selectedIndex].text);
@@ -2006,6 +2276,7 @@ Generate the Markdown table now.`;
         showGenerating(true);
         activeGenAbortCtl = new AbortController();
         Timer.start();
+        Progress.start(generateBtn, "genPctBadge");
 
         try {
           const cfgNow = currentProvider();
@@ -2025,6 +2296,7 @@ Generate the Markdown table now.`;
           const parsed = parseMarkdownTable(md);
           const n = parsed ? parsed.rows.length : 0;
           const ms = Timer.stop("done");
+          Progress.complete(generateBtn);
           setStatus(
             `Generated ${n} test case${n === 1 ? "" : "s"} with ${model} in ${Timer.fmt(ms)}.`,
             "success"
@@ -2040,6 +2312,7 @@ Generate the Markdown table now.`;
             Timer.stop("error");
             setStatus(err.message || String(err), "error");
           }
+          Progress.reset(generateBtn);
         } finally {
           activeGenAbortCtl = null;
           generateBtn.disabled = false;
@@ -2087,6 +2360,126 @@ Generate the Markdown table now.`;
           testBtn.innerHTML = originalLabel;
         }
       });
+
+      // ----------------------------------------------------------------------
+      // Refine (modal-based: open via toolbar icon, regenerate in-place)
+      // ----------------------------------------------------------------------
+      let activeRefineAbortCtl = null;
+
+      // Toolbar Refine button → open modal
+      if (refineOpenBtn) {
+        refineOpenBtn.addEventListener("click", () => {
+          if (!lastMarkdown) {
+            return setStatus("Generate a table first, then click Refine to revise it.", "error");
+          }
+          setRefineStatus("");
+          openRefineModal();
+        });
+      }
+
+      // Close handlers: X button, Cancel button, backdrop click, Esc key
+      if (refineCloseBtn) refineCloseBtn.addEventListener("click", closeRefineModal);
+      if (refineCancelBtn) refineCancelBtn.addEventListener("click", closeRefineModal);
+      if (refineBackdrop) {
+        refineBackdrop.addEventListener("click", (e) => {
+          if (e.target === refineBackdrop) closeRefineModal();
+        });
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && refineBackdrop && !refineBackdrop.hidden) {
+          closeRefineModal();
+        }
+      });
+
+      if (refineChips) {
+        refineChips.addEventListener("click", (e) => {
+          const chip = e.target.closest(".chip");
+          if (!chip) return;
+          const text = chip.dataset.suggest;
+          refineFeedback.value = refineFeedback.value
+            ? refineFeedback.value.trim() + "\n" + text
+            : text;
+          refineFeedback.focus();
+        });
+      }
+
+      if (refineBtn) {
+        refineBtn.addEventListener("click", async () => {
+          const feedback = (refineFeedback.value || "").trim();
+          if (!feedback) return setRefineStatus("Enter feedback first (or click a preset chip).", "error");
+          if (!lastMarkdown) return setRefineStatus("Nothing to refine yet — generate a table first.", "error");
+
+          const ready = readyOrError();
+          if (typeof ready === "string") return setRefineStatus(ready, "error");
+          const { apiKey, model, cfg } = ready;
+
+          const persona = personaEl.value.trim();
+          const story = storyEl.value.trim();
+          const ac = acEl.value.trim();
+          const customInstructions = customPromptEl.value.trim();
+          const testType = testTypeEl.value;
+          const domain = domainEl.value;
+          const temperature = Number(tempEl.value);
+
+          const cfgNow = currentProvider();
+          const imagesPayload = modelSupportsVision(cfgNow, model) ? screenshots : [];
+
+          const prompt = buildRefinePrompt(
+            persona, story, ac,
+            lastMarkdown, feedback,
+            customInstructions, testType, domain,
+            imagesPayload.length
+          );
+
+          refineBtn.disabled = true;
+          const originalLabel = refineBtn.innerHTML;
+          refineBtn.innerHTML = `<span class="loader"></span>Refining ${model}... <span class="pct-badge" id="refinePctBadge">0%</span>`;
+          setRefineStatus(`Calling ${cfg.label} with your feedback...`);
+          activeRefineAbortCtl = new AbortController();
+          Timer.start("Refine:");
+          Progress.start(refineBtn, "refinePctBadge");
+
+          try {
+            const raw = await callProvider({
+              apiKey, model, temperature, prompt,
+              images: imagesPayload,
+              signal: activeRefineAbortCtl?.signal,
+            });
+            const md = extractMarkdownTable(raw);
+            lastMarkdown = md;
+            localStorage.setItem(LS.lastMd, md);
+            renderResult();
+            updateActionButtons();
+            const parsed = parseMarkdownTable(md);
+            const n = parsed ? parsed.rows.length : 0;
+            const ms = Timer.stop("done");
+            Progress.complete(refineBtn);
+            setRefineStatus(
+              `Refined. Now ${n} test case${n === 1 ? "" : "s"} with ${model} in ${Timer.fmt(ms)}.`,
+              "success"
+            );
+            refineFeedback.value = "";
+            // Brief delay so users see the success state, then close the modal.
+            setTimeout(closeRefineModal, 650);
+          } catch (err) {
+            const wasAborted =
+              err && (err.name === "AbortError" || /aborted/i.test(err.message || ""));
+            if (wasAborted) {
+              Timer.reset();
+              setRefineStatus("Refinement cancelled.", "error");
+            } else {
+              console.error(err);
+              Timer.stop("error");
+              setRefineStatus(err.message || String(err), "error");
+            }
+            Progress.reset(refineBtn);
+          } finally {
+            activeRefineAbortCtl = null;
+            refineBtn.disabled = false;
+            refineBtn.innerHTML = originalLabel;
+          }
+        });
+      }
 
       // ----------------------------------------------------------------------
       // Copy / download
